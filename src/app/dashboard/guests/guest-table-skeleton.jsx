@@ -1,0 +1,52 @@
+import { Skeleton } from "@/components/ui/skeleton"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+
+export function GuestTableSkeleton() {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[100px]">Guest</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Phone</TableHead>
+          <TableHead>Total Spent</TableHead>
+          <TableHead>Rating</TableHead>
+          <TableHead>Last Booking</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {[...Array(5)].map((_, i) => (
+          <TableRow key={i}>
+            <TableCell>
+              <Skeleton className="h-4 w-[80px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[150px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[100px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[60px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[40px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[100px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[60px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[100px]" />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
