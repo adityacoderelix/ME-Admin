@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -17,7 +17,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -26,9 +26,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -37,14 +37,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   CalendarIcon,
   Download,
@@ -52,63 +52,172 @@ import {
   MoreHorizontal,
   Search,
   SortAsc,
-} from "lucide-react"
+} from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { format } from "date-fns"
-import { Calendar } from "@/components/ui/calendar"
+} from "@/components/ui/select";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 
 // Added booking entry based on your provided details.
-const bookings = [
-  {
-    id: "booking_1",
-    guest: "Divya Yash",
-    property: "Listing for Goa",
-    checkIn: "24 March 2025",
-    checkOut: "28 March 2025",
-    total: "₹1,37,025",
-    status: "Confirmed",
-  },
-]
-
+// const bookings = [
+//   {
+//     id: "booking_1",
+//     guest: "Divya Yash",
+//     property: "Listing for Goa",
+//     checkIn: "24 March 2025",
+//     checkOut: "28 March 2025",
+//     total: "₹1,37,025",
+//     status: "Confirmed",
+//   },
+// ];
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 export default function BookingsPage() {
-  const [date, setDate] = React.useState()
-  const [selectedBookings, setSelectedBookings] = React.useState([])
-  const [searchTerm, setSearchTerm] = React.useState("")
-  const [activeTab, setActiveTab] = React.useState("all")
-  const [loading, setLoading] = React.useState(true)
-
+  const [bookings, setBookings] = React.useState([
+    {
+      id: "booking_1",
+      guest: "Divya Yash",
+      property: "Listing for Goa",
+      checkIn: "24 March 2025",
+      checkOut: "28 March 2025",
+      total: "₹1,37,025",
+      status: "Confirmed",
+    },
+  ]);
+  const [date, setDate] = React.useState();
+  const [selectedBookings, setSelectedBookings] = React.useState([]);
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [activeTab, setActiveTab] = React.useState("all");
+  const [loading, setLoading] = React.useState(true);
+  const [userEmail, setUserEmail] = React.useState();
   // Simulate a 2 second loading delay to show the skeleton UI.
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      setLoading(false)
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [])
+      setLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const bookingData = await fetch(`${API_URL}/booking/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const result = await bookingData.json();
+        for (let i in result.data) {
+          setUserEmail(result.data[i].userId.email);
+          const checkInDate = new Date(result.data[i].checkIn);
+          const checkOutDate = new Date(result.data[i].checkOut);
+          const monthNames = [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+          ];
 
+          const checkInYear = checkInDate.getFullYear();
+          const checkOutYear = checkOutDate.getFullYear();
+          const checkInMonth = checkInDate.getMonth();
+          const checkOutMonth = checkOutDate.getMonth();
+          const checkInMonthName = monthNames[checkInMonth]; // This will return "March"
+          const checkOutMonthName = monthNames[checkOutMonth];
+          const checkInDay = checkInDate.getDate();
+          const checkOutDay = checkOutDate.getDate();
+          const data = {
+            checkIn: checkInDay + " " + checkInMonthName + " " + checkInYear,
+            checkOut:
+              checkOutDay + " " + checkOutMonthName + " " + checkOutYear,
+            guest:
+              result.data[i].hostId.firstName +
+              " " +
+              result.data[i].hostId.lastName,
+            id: result.data[i]._id,
+            property: result.data[i].propertyId.title,
+            status: result.data[i].status,
+            total: `₹ ${result.data[i].price}`,
+          };
+
+          bookings.push(data);
+        }
+        setBookings(bookings);
+        return result;
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchData();
+  }, []);
+  console.log(bookings);
   const filteredBookings = bookings.filter(
     (booking) =>
       (booking.guest.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.property.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (activeTab === "all" ||
         booking.status.toLowerCase() === activeTab.toLowerCase())
-  )
+  );
 
   const toggleBookingSelection = (id) => {
     setSelectedBookings((prev) =>
       prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
-    )
-  }
+    );
+  };
 
   const handleBulkAction = (action) => {
-    console.log(`Performing ${action} on bookings:`, selectedBookings)
+    console.log(`Performing ${action} on bookings:`, selectedBookings);
+
     // Implement bulk action logic here
-  }
+  };
+  const sendConfirmationToUser = async (bookingId, userEmail) => {
+    try {
+      const response = await fetch(`${API_URL}/booking/host/confirm`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bookingId: bookingId,
+          userEmail: userEmail,
+        }),
+      });
+      // renderBookingTable();
+      return response;
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const sendRejectionToUser = async (bookingId, userEmail) => {
+    try {
+      const response = await fetch(`${API_URL}/booking/host/cancel`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bookingId: bookingId,
+          userEmail: userEmail,
+        }),
+      });
+      return response;
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const renderBookingTable = (bookings) => {
     if (loading) {
@@ -119,7 +228,7 @@ export default function BookingsPage() {
           <div className="h-8 bg-gray-200 rounded animate-pulse" />
           <div className="h-8 bg-gray-200 rounded animate-pulse" />
         </div>
-      )
+      );
     }
 
     if (!loading && bookings.length === 0) {
@@ -132,7 +241,7 @@ export default function BookingsPage() {
             Looks like you haven't received any bookings yet.
           </p>
         </div>
-      )
+      );
     }
 
     return (
@@ -144,9 +253,9 @@ export default function BookingsPage() {
                 checked={selectedBookings.length === bookings.length}
                 onCheckedChange={(checked) => {
                   if (checked) {
-                    setSelectedBookings(bookings.map((b) => b.id))
+                    setSelectedBookings(bookings.map((b) => b.id));
                   } else {
-                    setSelectedBookings([])
+                    setSelectedBookings([]);
                   }
                 }}
               />
@@ -182,13 +291,13 @@ export default function BookingsPage() {
               <TableCell>
                 <Badge
                   variant={
-                    booking.status === "Confirmed"
-                      ? "default"
-                      : booking.status === "Pending"
-                      ? "secondary"
-                      : booking.status === "Completed"
-                      ? "success"
-                      : "destructive"
+                    booking.status === "confirmed"
+                      ? "outline"
+                      : booking.status === "pending"
+                        ? "default"
+                        : booking.status === "cancelled"
+                          ? "destructive"
+                          : "secondary"
                   }
                 >
                   {booking.status}
@@ -204,9 +313,20 @@ export default function BookingsPage() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>View details</DropdownMenuItem>
                     <DropdownMenuItem>Modify booking</DropdownMenuItem>
-                    <DropdownMenuItem>Send message</DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        sendConfirmationToUser(booking.id, userEmail);
+                      }}
+                    >
+                      Send message
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600">
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={() => {
+                        sendRejectionToUser(booking.id, userEmail);
+                      }}
+                    >
                       Cancel booking
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -216,8 +336,8 @@ export default function BookingsPage() {
           ))}
         </TableBody>
       </Table>
-    )
-  }
+    );
+  };
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 bg-gray-200 min-h-screen">
@@ -239,7 +359,12 @@ export default function BookingsPage() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+              />
             </PopoverContent>
           </Popover>
           <Button className="bg-primaryGreen text-white hover:bg-brightGreen rounded-md">
@@ -248,7 +373,11 @@ export default function BookingsPage() {
           </Button>
         </div>
       </div>
-      <Tabs defaultValue="all" className="space-y-4" onValueChange={setActiveTab}>
+      <Tabs
+        defaultValue="all"
+        className="space-y-4"
+        onValueChange={setActiveTab}
+      >
         <TabsList>
           <TabsTrigger value="all">All Bookings</TabsTrigger>
           <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
@@ -256,7 +385,7 @@ export default function BookingsPage() {
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
         </TabsList>
-        <div className="flex items-center space-x-2">
+        {/* <div className="flex items-center space-x-2">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground bg-white rounded-md" />
@@ -278,18 +407,12 @@ export default function BookingsPage() {
             <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuLabel>Filter by</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem>
-                Check-in Date
-              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem>Check-in Date</DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem>
                 Check-out Date
               </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>
-                Total Amount
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>
-                Property Type
-              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem>Total Amount</DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem>Property Type</DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Select>
@@ -302,10 +425,13 @@ export default function BookingsPage() {
               <SelectItem value="refund">Refund Selected</SelectItem>
             </SelectContent>
           </Select>
-          <Button className="bg-primaryGreen text-white hover:bg-brightGreen rounded-md" onClick={() => handleBulkAction("apply")}>
+          <Button
+            className="bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+            onClick={() => handleBulkAction("apply")}
+          >
             Apply
           </Button>
-        </div>
+        </div> */}
         <TabsContent value="all" className="space-y-4">
           <Card>
             <CardHeader>
@@ -363,5 +489,5 @@ export default function BookingsPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
