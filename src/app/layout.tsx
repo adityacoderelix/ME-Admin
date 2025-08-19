@@ -1,0 +1,27 @@
+import "./globals.css";
+import { bricolage, poppins } from "./fonts";
+import { AuthProvider } from "@/contexts/AuthContext";
+
+import { ReactNode } from "react";
+import { TanstackProvider } from "@/components/providers/sheet-provider";
+import Providers from "./providers";
+export const metadata = {
+  title: "Admin Panel | Majestic Escape",
+  description:
+    "Welcome, Admin. Check what's happening with Majestic Escape today",
+};
+interface RootLayoutProps {
+  children: ReactNode;
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
+  return (
+    <html lang="en" className={`${bricolage.variable} ${poppins.variable}`}>
+      <body className="bg-white text-gray-800 antialiased">
+        <AuthProvider>
+          <Providers>{children}</Providers>
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}

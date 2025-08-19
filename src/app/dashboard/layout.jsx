@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import * as React from 'react'
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { Sidebar } from "@/components/sidebar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import * as React from "react";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,12 +13,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Bell, Search, Settings, HelpCircle, LogOut } from 'lucide-react'
+} from "@/components/ui/dropdown-menu";
+import { Bell, Search, Settings, HelpCircle, LogOut } from "lucide-react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-export default function DashboardLayout({
-  children,
-}) {
+export default function DashboardLayout({ children }) {
   return (
     <SidebarProvider>
       <div className="flex h-screen overflow-hidden w-screen">
@@ -42,7 +41,10 @@ export default function DashboardLayout({
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-8 w-8 rounded-full"
+                  >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src="/avatars/01.png" alt="@username" />
                       <AvatarFallback>SC</AvatarFallback>
@@ -52,7 +54,9 @@ export default function DashboardLayout({
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">username</p>
+                      <p className="text-sm font-medium leading-none">
+                        username
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         m@example.com
                       </p>
@@ -76,11 +80,9 @@ export default function DashboardLayout({
               </DropdownMenu>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto">
-            {children}
-          </main>
+          <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
       </div>
     </SidebarProvider>
-  )
+  );
 }
