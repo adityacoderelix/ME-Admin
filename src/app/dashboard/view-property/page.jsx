@@ -1,11 +1,13 @@
 "use client";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useEffect, useState } from "react";
 import ImageCollection from "./component/image-collection";
 import PropertyDetails from "./component/property-details";
 import HostProfile from "./component/host-profile";
-
+import DialogModal from "../../../components/dialog-modal";
+import { propertyService } from "../../../services/propertyListingService";
+import { Button } from "@/components/ui/button";
 // import PropertyListing from "./components/property-listing";
 // import Location from "./components/location";
 // import ThingsToKnow from "./components/things-to-know";
@@ -42,9 +44,11 @@ const fetchHostData = async (hostIdStr) => {
 
 export default function detailView() {
   const searchParams = useSearchParams();
-
+  const router = useRouter();
   const propertyId = searchParams.get("property");
-
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [delistDialogOpen, setDelistDialogOpen] = useState(false);
   console.log("id", propertyId);
 
   const {
@@ -53,6 +57,7 @@ export default function detailView() {
     error: propertyError, // Renamed for clarity
     isFetching: isPropertyFetching,
     isError: isPropertyError,
+    refetch: refetchProperty,
   } = useQuery({
     queryKey: ["property", propertyId],
     queryFn: () => fetchProperty(propertyId),
@@ -81,6 +86,7 @@ export default function detailView() {
     error: hostError, // Renamed for clarity
     isFetching: isHostFetching,
     isError: isHostError,
+    refetch: refetchHost,
   } = useQuery({
     queryKey: ["hostProfile", hostIdStr], // Use normalized hostIdStr in key
     queryFn: () => fetchHostData(hostIdStr),
@@ -105,8 +111,82 @@ export default function detailView() {
 
   return (
     <main className="min-h-screen pt-16 md:pt-32 bg-white">
+      <DialogModal
+        choice={"Approve"}
+        open={approveDialogOpen}
+        onClose={() => {
+          setApproveDialogOpen(false);
+        }}
+        onConfirm={async () => {
+          console.log("ins", propertyId);
+          await propertyService.approveListing(propertyId);
+          setApproveDialogOpen(false);
+          refetchProperty();
+          refetchHost();
+        }}
+      />
+      <DialogModal
+        choice={"Delete"}
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+        }}
+        onConfirm={async () => {
+          await propertyService.handleConfirmDelete(propertyId);
+          setDeleteDialogOpen(false);
+          router.push("/dashboard/properties");
+        }}
+      />
+      <DialogModal
+        choice={"Delist"}
+        open={delistDialogOpen}
+        onClose={() => {
+          setDelistDialogOpen(false);
+        }}
+        onConfirm={async () => {
+          await propertyService.handleConfirmDelist(propertyId);
+          setDelistDialogOpen(false);
+          refetchProperty();
+          refetchHost();
+        }}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Property Title */}
+        {propertyData ? (
+          <>
+            <div className="mb-4 md:mb-6 ">
+              <span className="font-bold">Property Status</span> :{" "}
+              {propertyData?.status.charAt(0).toUpperCase()}
+              {propertyData?.status.slice(1)}
+            </div>
+            <div className="mb-4 md:mb-6">
+              {propertyData?.status != "active" ? (
+                <Button
+                  className="mr-4 bg-primaryGreen text-white py-3 rounded-md w-half mr-4"
+                  onClick={() => setApproveDialogOpen(true)}
+                >
+                  Approve
+                </Button>
+              ) : null}
+              <Button
+                className="mr-4"
+                onClick={() => setDeleteDialogOpen(true)}
+                variant="destructive"
+              >
+                Delete
+              </Button>
+              {propertyData?.status == "active" ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setDelistDialogOpen(true)}
+                >
+                  Delist
+                </Button>
+              ) : null}
+            </div>
+          </>
+        ) : null}
+
         <h1 className="text-xl md:text-2xl font-bricolage font-semibold mb-4 md:mb-6">
           {propertyData?.title || "Property Title"}
         </h1>

@@ -1,7 +1,9 @@
 import axios from "axios";
+import { toast } from "sonner";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://server-me.vercel.app/api/v1";
 
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 export const propertyService = {
   getAllProperties: async (
     page = 1,
@@ -102,6 +104,88 @@ export const propertyService = {
     } catch (error) {
       throw new Error(
         error.response?.data?.message || "Failed to export properties"
+      );
+    }
+  },
+  approveListing: async (listingId) => {
+    try {
+      const getLocalData = await localStorage.getItem("token");
+      const data = JSON.parse(getLocalData);
+      console.log("tok", data, listingId);
+      if (data) {
+        const response = await fetch(
+          `${API_URL}/properties/admin/approve/${listingId}`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${data}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (!response) {
+          throw new error("Something is wrong");
+        }
+
+        return response.data;
+      }
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.message || "Failed to approve listing"
+      );
+    }
+  },
+  handleConfirmDelete: async (id) => {
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
+    if (data) {
+      try {
+        const response = await fetch(
+          `${API_URL}/properties/user-property/${id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${data}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to delete the listing");
+        }
+
+        toast.success("Listing deleted successfully");
+      } catch (error) {
+        console.error("Failed to delete listing:", error);
+        toast.error("Failed to delete listing");
+      }
+    }
+  },
+  handleConfirmDelist: async (listingId) => {
+    try {
+      const getLocalData = await localStorage.getItem("token");
+      const data = JSON.parse(getLocalData);
+      if (data) {
+        const response = await fetch(
+          `${API_URL}/properties/admin/delist/${listingId}`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${data}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (!response.status == 200) {
+          throw new error("Something is wrong");
+        }
+
+        return response.data;
+      }
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.message || "Failed to approve listing"
       );
     }
   },

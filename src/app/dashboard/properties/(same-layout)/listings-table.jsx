@@ -102,10 +102,25 @@ const getFilteredListings = async (page = 1, limit = 10, status = "all") => {
 
 const approveListing = async (listingId) => {
   try {
-    const response = await axios.put(
-      `${API_URL}/properties/admin/approve/${listingId}`
-    );
-    return response.data;
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
+    if (data) {
+      const response = await fetch(
+        `${API_URL}/properties/admin/approve/${listingId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${data}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!response.status == 200) {
+        throw new error("Something is wrong");
+      }
+
+      return response.data;
+    }
   } catch (error) {
     throw new Error(
       error.response?.data?.message || "Failed to approve listing"
@@ -113,6 +128,33 @@ const approveListing = async (listingId) => {
   }
 };
 
+const deListing = async (listingId) => {
+  try {
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
+    if (data) {
+      const response = await fetch(
+        `${API_URL}/properties/admin/delist/${listingId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${data}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!response.status == 200) {
+        throw new error("Something is wrong");
+      }
+
+      return response.data;
+    }
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || "Failed to approve listing"
+    );
+  }
+};
 // -------------- TABLE COMPONENT ---------------
 const SkeletonRow = ({ columns }) => (
   <TableRow>
@@ -132,7 +174,11 @@ export function ListingsTable() {
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [listingToDelete, setListingToDelete] = useState(null);
+  const [listingToApprove, setListingToApprove] = useState(null);
+  const [listingToDelist, setListingToDelist] = useState(null);
+  const [delistDialogOpen, setDelistDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [imagePopupOpen, setImagePopupOpen] = useState(false);
@@ -180,11 +226,40 @@ export function ListingsTable() {
     setImagePopupOpen(true);
   }, []);
 
-  const handleApproveListing = async (listingId) => {
+  const handleApproveListing = useCallback((listing) => {
+    setListingToApprove(listing);
+    setApproveDialogOpen(true);
+  }, []);
+
+  const handleConfirmApproveListing = async () => {
     try {
-      await approveListing(listingId);
-      toast.success("Listing approved successfully");
-      fetchFilteredListings();
+      if (listingToApprove) {
+        await approveListing(listingToApprove._id);
+        toast.success("Listing approved successfully");
+        setApproveDialogOpen(false);
+        setListingToApprove(null);
+        fetchFilteredListings();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message);
+    }
+  };
+
+  const handleDelisting = useCallback((listing) => {
+    setListingToDelist(listing);
+    setDelistDialogOpen(true);
+  }, []);
+
+  const handleConfirmDelist = async () => {
+    try {
+      if (listingToDelist) {
+        await deListing(listingToDelist._id);
+        toast.success("Listing delist successfully");
+        setDelistDialogOpen(false);
+        setListingToDelist(null);
+        fetchFilteredListings();
+      }
     } catch (error) {
       console.error(error);
       toast.error(error.message);
@@ -198,27 +273,35 @@ export function ListingsTable() {
 
   const handleConfirmDelete = useCallback(async () => {
     if (listingToDelete) {
-      try {
-        const response = await fetch(
-          `${API_URL}/properties/user-property/${listingToDelete._id}`,
-          {
-            method: "DELETE",
+      const getLocalData = await localStorage.getItem("token");
+      const data = JSON.parse(getLocalData);
+      if (data) {
+        try {
+          const response = await fetch(
+            `${API_URL}/properties/user-property/${listingToDelete._id}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${data}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to delete the listing");
           }
-        );
 
-        if (!response.ok) {
-          throw new Error("Failed to delete the listing");
+          setData((prevData) =>
+            prevData?.filter((item) => item._id !== listingToDelete._id)
+          );
+          setDeleteDialogOpen(false);
+          setListingToDelete(null);
+          toast.success("Listing deleted successfully");
+        } catch (error) {
+          console.error("Failed to delete listing:", error);
+          toast.error("Failed to delete listing");
         }
-
-        setData((prevData) =>
-          prevData?.filter((item) => item._id !== listingToDelete._id)
-        );
-        setDeleteDialogOpen(false);
-        setListingToDelete(null);
-        toast.success("Listing deleted successfully");
-      } catch (error) {
-        console.error("Failed to delete listing:", error);
-        toast.error("Failed to delete listing");
       }
     }
   }, [listingToDelete]);
@@ -373,11 +456,18 @@ export function ListingsTable() {
                   View
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => handleApproveListing(listing._id)}
-                >
-                  Approve
-                </DropdownMenuItem>
+                {listing.status != "active" ? (
+                  <DropdownMenuItem
+                    onClick={() => handleApproveListing(listing)}
+                  >
+                    Approve
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => handleDelisting(listing)}>
+                    Delist
+                  </DropdownMenuItem>
+                )}
+
                 <DropdownMenuItem onClick={() => handleDeleteClick(listing)}>
                   Delete listing
                 </DropdownMenuItem>
@@ -434,6 +524,58 @@ export function ListingsTable() {
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Approval</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve the listing &quot;
+              {listingToApprove?.title}&quot;? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setApproveDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+              onClick={handleConfirmApproveListing}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={delistDialogOpen} onOpenChange={setDelistDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delisting</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delist the listing &quot;
+              {listingToDelist?.title}&quot;? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDelistDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+              onClick={handleConfirmDelist}
+            >
+              Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
