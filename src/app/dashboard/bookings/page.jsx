@@ -62,6 +62,8 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 // Added booking entry based on your provided details.
 // const bookings = [
@@ -78,98 +80,140 @@ import { Calendar } from "@/components/ui/calendar";
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 export default function BookingsPage() {
   const [bookings, setBookings] = React.useState([
-    {
-      id: "booking_1",
-      guest: "Divya Yash",
-      property: "Listing for Goa",
-      checkIn: "24 March 2025",
-      checkOut: "28 March 2025",
-      total: "₹1,37,025",
-      status: "Confirmed",
-    },
+    // {
+    //   id: "booking_1",
+    //   guest: "Divya Yash",
+    //   property: "Listing for Goa",
+    //   checkIn: "24 March 2025",
+    //   checkOut: "28 March 2025",
+    //   total: "₹1,37,025",
+    //   status: "Pending",
+    // },
   ]);
-  const [date, setDate] = React.useState();
+  const router = useRouter();
+  const [date, setDate] = React.useState(new Date().toString());
   const [selectedBookings, setSelectedBookings] = React.useState([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [activeTab, setActiveTab] = React.useState("all");
   const [loading, setLoading] = React.useState(true);
   const [userEmail, setUserEmail] = React.useState();
+  const [rejectDialogOpen, setRejectDialogOpen] = React.useState(false);
+  const [bookingId, setBookingId] = React.useState(null);
   // Simulate a 2 second loading delay to show the skeleton UI.
+  const getDate = (item) => {
+    const month = new Date(item).getMonth();
+    const year = new Date(item).getFullYear();
+    const day = new Date(item).getDate();
+    const newDate = new Date(Date.UTC(year, month, day));
+    return newDate.toISOString();
+  };
+  const fetchData = async () => {
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
+    const from = getDate(date);
+    console.log("here", from);
+    if (data) {
+      try {
+        const response = await fetch(
+          `${API_URL}/booking/filter?search=${searchTerm}&status=${activeTab}&from=${from}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${data}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const result = await response.json();
+        console.log(result.data);
+        const final = await result.data;
+        setBookings(final);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+  React.useEffect(() => {
+    fetchData();
+  }, [searchTerm, activeTab, date]);
+
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
-  React.useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const bookingData = await fetch(`${API_URL}/booking/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const result = await bookingData.json();
-        for (let i in result.data) {
-          setUserEmail(result.data[i].userId.email);
-          const checkInDate = new Date(result.data[i].checkIn);
-          const checkOutDate = new Date(result.data[i].checkOut);
-          const monthNames = [
-            "January",
-            "February",
-            "March",
-            "April",
-            "May",
-            "June",
-            "July",
-            "August",
-            "September",
-            "October",
-            "November",
-            "December",
-          ];
+  // React.useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const bookingData = await fetch(`${API_URL}/booking/`, {
+  //         method: "GET",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //       });
+  //       const result = await bookingData.json();
+  //       for (let i in result.data) {
+  //         setUserEmail(result.data[i].userId.email);
+  //         const checkInDate = new Date(result.data[i].checkIn);
+  //         const checkOutDate = new Date(result.data[i].checkOut);
+  //         const monthNames = [
+  //           "January",
+  //           "February",
+  //           "March",
+  //           "April",
+  //           "May",
+  //           "June",
+  //           "July",
+  //           "August",
+  //           "September",
+  //           "October",
+  //           "November",
+  //           "December",
+  //         ];
 
-          const checkInYear = checkInDate.getFullYear();
-          const checkOutYear = checkOutDate.getFullYear();
-          const checkInMonth = checkInDate.getMonth();
-          const checkOutMonth = checkOutDate.getMonth();
-          const checkInMonthName = monthNames[checkInMonth]; // This will return "March"
-          const checkOutMonthName = monthNames[checkOutMonth];
-          const checkInDay = checkInDate.getDate();
-          const checkOutDay = checkOutDate.getDate();
-          const data = {
-            checkIn: checkInDay + " " + checkInMonthName + " " + checkInYear,
-            checkOut:
-              checkOutDay + " " + checkOutMonthName + " " + checkOutYear,
-            guest:
-              result.data[i].hostId.firstName +
-              " " +
-              result.data[i].hostId.lastName,
-            id: result.data[i]._id,
-            property: result.data[i].propertyId.title,
-            status: result.data[i].status,
-            total: `₹ ${result.data[i].price}`,
-          };
+  //         const checkInYear = checkInDate.getFullYear();
+  //         const checkOutYear = checkOutDate.getFullYear();
+  //         const checkInMonth = checkInDate.getMonth();
+  //         const checkOutMonth = checkOutDate.getMonth();
+  //         const checkInMonthName = monthNames[checkInMonth]; // This will return "March"
+  //         const checkOutMonthName = monthNames[checkOutMonth];
+  //         const checkInDay = checkInDate.getDate();
+  //         const checkOutDay = checkOutDate.getDate();
+  //         const data = {
+  //           checkIn: checkInDay + " " + checkInMonthName + " " + checkInYear,
+  //           checkOut:
+  //             checkOutDay + " " + checkOutMonthName + " " + checkOutYear,
+  //           guest:
+  //             result.data[i].hostId.firstName +
+  //             " " +
+  //             result.data[i].hostId.lastName,
+  //           id: result.data[i]._id,
+  //           property: result.data[i].propertyId.title,
+  //           status: result.data[i].status,
+  //           total: `₹ ${result.data[i].price}`,
+  //         };
 
-          bookings.push(data);
-        }
-        setBookings(bookings);
-        return result;
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchData();
-  }, []);
-  console.log(bookings);
-  const filteredBookings = bookings.filter(
-    (booking) =>
-      (booking.guest.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.property.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (activeTab === "all" ||
-        booking.status.toLowerCase() === activeTab.toLowerCase())
-  );
+  //         bookings.push(data);
+  //       }
+  //       setBookings(bookings);
+  //       return result;
+  //     } catch (err) {
+  //       console.error(err);
+  //     }
+  //   };
+  //   fetchData();
+  // }, []);
+  console.log("new", bookings);
+  console.log("tab", activeTab);
+  console.log("date", date);
+  // const filteredBookings = bookings.filter(
+  //   (booking) =>
+  //     (booking.guest.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //       booking.property.toLowerCase().includes(searchTerm.toLowerCase())) &&
+  //     (activeTab === "all" ||
+  //       booking.status.toLowerCase() === activeTab.toLowerCase())
+  // );
 
   const toggleBookingSelection = (id) => {
     setSelectedBookings((prev) =>
@@ -182,37 +226,49 @@ export default function BookingsPage() {
 
     // Implement bulk action logic here
   };
-  const sendConfirmationToUser = async (bookingId, userEmail) => {
-    try {
-      const response = await fetch(`${API_URL}/booking/host/confirm`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          bookingId: bookingId,
-          userEmail: userEmail,
-        }),
-      });
-      // renderBookingTable();
-      return response;
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // const sendConfirmationToUser = async (bookingId, userEmail) => {
+  //   try {
+  //     const response = await fetch(`${API_URL}/booking/host/confirm`, {
+  //       method: "PATCH",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         bookingId: bookingId,
+  //         userEmail: userEmail,
+  //       }),
+  //     });
+  //     // renderBookingTable();
+  //     return response;
+  //   } catch (err) {
+  //     console.error(err);
+  //   }
+  // };
 
-  const sendRejectionToUser = async (bookingId, userEmail) => {
+  const sendRejectionToUser = async () => {
     try {
-      const response = await fetch(`${API_URL}/booking/host/cancel`, {
+      console.log("nn", bookingId);
+      const getLocalData = await localStorage.getItem("token");
+      const data = JSON.parse(getLocalData);
+
+      const response = await fetch(`${API_URL}/booking/admin/cancel`, {
         method: "PATCH",
         headers: {
+          Authorization: `Bearer ${data}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           bookingId: bookingId,
-          userEmail: userEmail,
         }),
       });
+      if (!response.status == 200) {
+        return;
+      }
+
+      setBookingId(null);
+      setRejectDialogOpen(false);
+      toast.success("Booking successfully cancelled");
+      fetchData();
       return response;
     } catch (err) {
       console.error(err);
@@ -243,7 +299,35 @@ export default function BookingsPage() {
         </div>
       );
     }
+    const StatusPill = ({ status }) => {
+      const getStatusColor = (status) => {
+        switch (status) {
+          case "confirmed":
+            return "bg-green-100 text-green-800";
+          case "rejected":
+            return "bg-red-100 text-red-800";
+          case "cancelled":
+            return "bg-orange-100 text-orange-800";
 
+          default:
+            return "bg-gray-100 text-gray-800";
+        }
+      };
+
+      return (
+        <span
+          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(status)}`}
+        >
+          {status === "processing"
+            ? "Pending"
+            : status?.charAt(0).toUpperCase() + status?.slice(1)}
+        </span>
+      );
+    };
+    const handleModal = (booking) => {
+      setRejectDialogOpen(true);
+      setBookingId(booking._id);
+    };
     return (
       <Table>
         <TableHeader>
@@ -276,32 +360,26 @@ export default function BookingsPage() {
         </TableHeader>
         <TableBody>
           {bookings.map((booking) => (
-            <TableRow key={booking.id}>
+            <TableRow key={booking._id}>
               <TableCell>
                 <Checkbox
-                  checked={selectedBookings.includes(booking.id)}
-                  onCheckedChange={() => toggleBookingSelection(booking.id)}
+                  checked={selectedBookings.includes(booking._id)}
+                  onCheckedChange={() => toggleBookingSelection(booking._id)}
                 />
               </TableCell>
-              <TableCell className="font-medium">{booking.guest}</TableCell>
-              <TableCell>{booking.property}</TableCell>
-              <TableCell>{booking.checkIn}</TableCell>
-              <TableCell>{booking.checkOut}</TableCell>
-              <TableCell>{booking.total}</TableCell>
+              <TableCell className="font-medium">
+                {booking.userId.firstName} {booking?.userId?.lastName}
+              </TableCell>
+              <TableCell>{booking?.propertyId.title}</TableCell>
               <TableCell>
-                <Badge
-                  variant={
-                    booking.status === "confirmed"
-                      ? "outline"
-                      : booking.status === "pending"
-                        ? "default"
-                        : booking.status === "cancelled"
-                          ? "destructive"
-                          : "secondary"
-                  }
-                >
-                  {booking.status}
-                </Badge>
+                {new Date(booking?.checkIn).toDateString().slice(3)}
+              </TableCell>
+              <TableCell>
+                {new Date(booking?.checkOut).toDateString().slice(3)}
+              </TableCell>
+              <TableCell>{booking?.price}</TableCell>
+              <TableCell>
+                <StatusPill status={booking?.status} />
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
@@ -311,20 +389,28 @@ export default function BookingsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>View details</DropdownMenuItem>
-                    <DropdownMenuItem>Modify booking</DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        router.push(
+                          `/dashboard/booking-details?booking=${booking._id}`
+                        )
+                      }
+                    >
+                      View details
+                    </DropdownMenuItem>
+                    {/* <DropdownMenuItem>Modify booking</DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         sendConfirmationToUser(booking.id, userEmail);
                       }}
                     >
                       Send message
-                    </DropdownMenuItem>
+                    </DropdownMenuItem> */}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-red-600"
                       onClick={() => {
-                        sendRejectionToUser(booking.id, userEmail);
+                        handleModal(booking);
                       }}
                     >
                       Cancel booking
@@ -338,7 +424,9 @@ export default function BookingsPage() {
       </Table>
     );
   };
-
+  const sendData = async () => {
+    await sendRejectionToUser();
+  };
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 bg-gray-200 min-h-screen">
       <div className="flex items-center justify-between space-y-2">
@@ -372,6 +460,40 @@ export default function BookingsPage() {
             Export CSV
           </Button>
         </div>
+      </div>
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Cancellation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel the booking &quot; &quot;? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={sendData}>
+              Yes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <div className="flex-1">
+        <Label htmlFor="search" className="sr-only">
+          Search reservations
+        </Label>
+        <Input
+          id="search"
+          className="bg-white"
+          placeholder="Search by guest name or property..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
       <Tabs
         defaultValue="all"
@@ -440,7 +562,7 @@ export default function BookingsPage() {
                 Manage and view details of all bookings
               </CardDescription>
             </CardHeader>
-            <CardContent>{renderBookingTable(filteredBookings)}</CardContent>
+            <CardContent>{renderBookingTable(bookings)}</CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="confirmed" className="space-y-4">
@@ -451,7 +573,7 @@ export default function BookingsPage() {
                 View and manage all confirmed bookings
               </CardDescription>
             </CardHeader>
-            <CardContent>{renderBookingTable(filteredBookings)}</CardContent>
+            <CardContent>{renderBookingTable(bookings)}</CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="pending" className="space-y-4">
@@ -462,7 +584,7 @@ export default function BookingsPage() {
                 Review and process pending bookings
               </CardDescription>
             </CardHeader>
-            <CardContent>{renderBookingTable(filteredBookings)}</CardContent>
+            <CardContent>{renderBookingTable(bookings)}</CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="completed" className="space-y-4">
@@ -473,7 +595,7 @@ export default function BookingsPage() {
                 View details of completed bookings
               </CardDescription>
             </CardHeader>
-            <CardContent>{renderBookingTable(filteredBookings)}</CardContent>
+            <CardContent>{renderBookingTable(bookings)}</CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="cancelled" className="space-y-4">
@@ -484,7 +606,7 @@ export default function BookingsPage() {
                 Review cancelled bookings and manage refunds
               </CardDescription>
             </CardHeader>
-            <CardContent>{renderBookingTable(filteredBookings)}</CardContent>
+            <CardContent>{renderBookingTable(bookings)}</CardContent>
           </Card>
         </TabsContent>
       </Tabs>

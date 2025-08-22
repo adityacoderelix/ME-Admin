@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ReactNode } from "react";
 import { TanstackProvider } from "@/components/providers/sheet-provider";
 import Providers from "./providers";
+import { Toaster } from "sonner";
 export const metadata = {
   title: "Admin Panel | Majestic Escape",
   description:
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <AuthProvider>
           <Providers>{children}</Providers>
         </AuthProvider>
+        <Toaster position="top-center" closeButton richColors />
       </body>
     </html>
   );
