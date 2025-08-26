@@ -342,6 +342,20 @@ export function ListingsTable() {
             </Button>
           );
         },
+        cell: ({ row }) => {
+          const title = row.getValue("title") || "";
+          const truncated =
+            title.length > 30 ? title.substring(0, 30) + "…" : title;
+
+          return (
+            <span
+              title={title}
+              className="block max-w-[250px] truncate cursor-pointer"
+            >
+              {truncated}
+            </span>
+          );
+        },
       },
       {
         accessorKey: "propertyType",

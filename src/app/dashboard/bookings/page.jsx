@@ -287,7 +287,7 @@ export default function BookingsPage() {
       );
     }
 
-    if (!loading && bookings.length === 0) {
+    if (!loading && !bookings) {
       return (
         <div className="py-10 text-center">
           <h3 className="text-lg font-medium text-gray-900">
@@ -333,8 +333,8 @@ export default function BookingsPage() {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[50px]">
-              <Checkbox
-                checked={selectedBookings.length === bookings.length}
+              {/* <Checkbox
+                checked={selectedBookings?.length === bookings?.length}
                 onCheckedChange={(checked) => {
                   if (checked) {
                     setSelectedBookings(bookings.map((b) => b.id));
@@ -342,7 +342,7 @@ export default function BookingsPage() {
                     setSelectedBookings([]);
                   }
                 }}
-              />
+              /> */}
             </TableHead>
             <TableHead className="w-[180px]">Guest</TableHead>
             <TableHead className="w-[180px]">Property</TableHead>
