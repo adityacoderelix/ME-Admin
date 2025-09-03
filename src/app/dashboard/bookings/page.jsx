@@ -124,6 +124,13 @@ export default function BookingsPage() {
             },
           }
         );
+        if (response.status === 401) {
+          // Token expired or missing
+          localStorage.removeItem("token");
+          localStorage.removeItem("userId");
+          router.push("/"); // redirect to login
+          return;
+        }
         const result = await response.json();
         console.log(result.data);
         const final = await result.data;
@@ -328,6 +335,13 @@ export default function BookingsPage() {
       setRejectDialogOpen(true);
       setBookingId(booking._id);
     };
+
+    function checkLength(value) {
+      if (value?.length > 15) {
+        return value.substring(0, 15) + "…";
+      }
+      return value;
+    }
     return (
       <Table>
         <TableHeader>
@@ -368,9 +382,21 @@ export default function BookingsPage() {
                 />
               </TableCell>
               <TableCell className="font-medium">
-                {booking.userId.firstName} {booking?.userId?.lastName}
+                <span
+                  title={
+                    booking.userId.firstName + " " + booking?.userId?.lastName
+                  }
+                >
+                  {checkLength(
+                    booking.userId.firstName + " " + booking?.userId?.lastName
+                  )}
+                </span>
               </TableCell>
-              <TableCell>{booking?.propertyId.title}</TableCell>
+              <TableCell>
+                <span title={booking?.propertyId.title}>
+                  {checkLength(booking?.propertyId.title)}
+                </span>
+              </TableCell>
               <TableCell>
                 {new Date(booking?.checkIn).toDateString().slice(3)}
               </TableCell>

@@ -92,6 +92,13 @@ const getFilteredListings = async (page = 1, limit = 10, status = "all") => {
         params: { page, limit, status },
       }
     );
+    if (response.status === 401) {
+      // Token expired or missing
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+      router.push("/"); // redirect to login
+      return;
+    }
     return response.data;
   } catch (error) {
     throw new Error(
