@@ -258,7 +258,13 @@ export default function PropertyAmenities({
     },
     {} as Record<string, typeof matchedAmenities>
   );
+  function removeHypen(str) {
+    const first = str
+      .replace(/[-_]+/g, " ") // Replace hyphens and underscores with spaces
+      .replace(/(^| )([a-z])/g, (match) => match.toUpperCase()); // Capitalize first letter after space or start
 
+    return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+  }
   return (
     <>
       <div className="border-b pb-6 mb-6">
@@ -324,39 +330,42 @@ export default function PropertyAmenities({
       {safety ? (
         <div className="border-b pb-6 mb-6">
           <h2 className="text-xl font-medium mb-6">Safety Details</h2>
-          {Object?.entries(safety).map(([key, value]) =>
-            value.description ? <div>• {value.description}</div> : null
+          {Object.entries(safety).map(([key, value]) =>
+            value?.checked == true ? (
+              value?.description ? (
+                <div className="">• {removeHypen(value.description)}</div>
+              ) : (
+                <div>• {removeHypen(key)}</div>
+              )
+            ) : null
           )}
         </div>
       ) : null}
+
       {rules?.length != 0 && custom?.length != 0 ? (
         <div className="border-b pb-6 mb-6">
           <h2 className="text-xl font-medium mb-6">Stay Rules</h2>
-          {rules?.map((item) =>
+          {rules.map((item) =>
             item.includes("_") ? (
-              <div className="pb-4">
-                •{" "}
-                {item.charAt(0).toUpperCase() +
-                  item.replace(/_/g, " ").slice(1)}
-              </div>
+              <div className="pb-4">• {removeHypen(item)}</div>
             ) : null
           )}
-          {custom?.map((item) => (
-            <div className="pb-4">• {item}</div>
+          {custom.map((item) => (
+            <div className="pb-4">• {removeHypen(item)}</div>
           ))}
         </div>
       ) : rules?.length != 0 ? (
         <div className="border-b pb-6 mb-6">
           <h2 className="text-xl font-medium mb-6">Stay Rules</h2>
-          {rules?.map((item) => (
-            <div>{item}</div>
+          {rules.map((item) => (
+            <div className="pb-4">• {removeHypen(item)}</div>
           ))}
         </div>
       ) : custom?.length != 0 ? (
         <div className="border-b pb-6 mb-6">
           <h2 className="text-xl font-medium mb-6">Stay Rules</h2>
-          {custom?.map((item) => (
-            <div>{item}</div>
+          {custom.map((item) => (
+            <div className="pb-4">• {removeHypen(item)}</div>
           ))}
         </div>
       ) : null}
