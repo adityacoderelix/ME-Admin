@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -20,7 +20,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,29 +28,76 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Star, MoreHorizontal } from 'lucide-react'
+} from "@/components/ui/dropdown-menu";
+import { Star, MoreHorizontal } from "lucide-react";
 
 // Mock data for reviews
 const reviews = [
-  { id: 1, propertyName: "Sunset Villa", userName: "Alice Johnson", userAvatar: "/aditya.png", date: "2023-06-15", rating: 4.5, content: "Beautiful property with amazing views!", tags: ["Scenic", "Relaxing"] },
-  { id: 2, propertyName: "Beach Bungalow", userName: "Bob Smith", userAvatar: "/aditya.png", date: "2023-06-14", rating: 3.8, content: "Nice place, but could be cleaner.", tags: ["Beach", "Needs Improvement"] },
-  { id: 3, propertyName: "Mountain Retreat", userName: "Charlie Brown", userAvatar: "/aditya.png", date: "2023-06-13", rating: 5, content: "Absolutely stunning! Will definitely come back.", tags: ["Peaceful", "Nature"] },
-  { id: 4, propertyName: "City Center Apartment", userName: "Diana Ross", userAvatar: "/aditya.png", date: "2023-06-12", rating: 4.2, content: "Great location, modern amenities.", tags: ["Central", "Modern"] },
-  { id: 5, propertyName: "Riverside Cottage", userName: "Edward Norton", userAvatar: "/aditya.png", date: "2023-06-11", rating: 4.7, content: "Cozy and charming. Perfect getaway!", tags: ["Cozy", "Romantic"] },
-]
+  {
+    id: 1,
+    propertyName: "Sunset Villa",
+    userName: "Alice Johnson",
+    userAvatar: "/aditya.png",
+    date: "2023-06-15",
+    rating: 4.5,
+    content: "Beautiful property with amazing views!",
+    tags: ["Scenic", "Relaxing"],
+  },
+  {
+    id: 2,
+    propertyName: "Beach Bungalow",
+    userName: "Bob Smith",
+    userAvatar: "/aditya.png",
+    date: "2023-06-14",
+    rating: 3.8,
+    content: "Nice place, but could be cleaner.",
+    tags: ["Beach", "Needs Improvement"],
+  },
+  {
+    id: 3,
+    propertyName: "Mountain Retreat",
+    userName: "Charlie Brown",
+    userAvatar: "/aditya.png",
+    date: "2023-06-13",
+    rating: 5,
+    content: "Absolutely stunning! Will definitely come back.",
+    tags: ["Peaceful", "Nature"],
+  },
+  {
+    id: 4,
+    propertyName: "City Center Apartment",
+    userName: "Diana Ross",
+    userAvatar: "/aditya.png",
+    date: "2023-06-12",
+    rating: 4.2,
+    content: "Great location, modern amenities.",
+    tags: ["Central", "Modern"],
+  },
+  {
+    id: 5,
+    propertyName: "Riverside Cottage",
+    userName: "Edward Norton",
+    userAvatar: "/aditya.png",
+    date: "2023-06-11",
+    rating: 4.7,
+    content: "Cozy and charming. Perfect getaway!",
+    tags: ["Cozy", "Romantic"],
+  },
+];
 
 const ReviewsPage = () => {
-  const [selectedRating, setSelectedRating] = useState("All")
-  const [selectedProperty, setSelectedProperty] = useState("All")
+  const [selectedRating, setSelectedRating] = useState("All");
+  const [selectedProperty, setSelectedProperty] = useState("All");
 
-  const filteredReviews = reviews.filter(review => 
-    (selectedRating === "All" || review.rating >= parseInt(selectedRating)) &&
-    (selectedProperty === "All" || review.propertyName === selectedProperty)
-  )
+  const filteredReviews = reviews.filter(
+    (review) =>
+      (selectedRating === "All" || review.rating >= parseInt(selectedRating)) &&
+      (selectedProperty === "All" || review.propertyName === selectedProperty)
+  );
 
-  const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-  const totalReviews = reviews.length
+  const averageRating =
+    reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+  const totalReviews = reviews.length;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -59,14 +106,14 @@ const ReviewsPage = () => {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Average Rating
+            </CardTitle>
             <Star className="h-4 w-4 text-yellow-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">
-              Out of 5 stars
-            </p>
+            <p className="text-xs text-muted-foreground">Out of 5 stars</p>
           </CardContent>
         </Card>
         <Card>
@@ -118,14 +165,21 @@ const ReviewsPage = () => {
             </div>
             <div className="flex-1 min-w-[200px]">
               <Label htmlFor="property">Property</Label>
-              <Select value={selectedProperty} onValueChange={setSelectedProperty}>
+              <Select
+                value={selectedProperty}
+                onValueChange={setSelectedProperty}
+              >
                 <SelectTrigger id="property">
                   <SelectValue placeholder="Select property" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Properties</SelectItem>
-                  {Array.from(new Set(reviews.map(review => review.propertyName))).map(property => (
-                    <SelectItem key={property} value={property}>{property}</SelectItem>
+                  {Array.from(
+                    new Set(reviews.map((review) => review.propertyName))
+                  ).map((property) => (
+                    <SelectItem key={property} value={property}>
+                      {property}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -158,10 +212,16 @@ const ReviewsPage = () => {
             <TableBody>
               {filteredReviews.map((review) => (
                 <TableRow key={review.id}>
-                  <TableCell className="font-medium">{review.propertyName}</TableCell>
+                  <TableCell className="font-medium">
+                    {review.propertyName}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center">
-                      <img src={review.userAvatar} alt={review.userName} className="w-8 h-8 rounded-full mr-2" />
+                      <img
+                        src={review.userAvatar}
+                        alt={review.userName}
+                        className="w-8 h-8 rounded-full mr-2"
+                      />
                       {review.userName}
                     </div>
                   </TableCell>
@@ -172,11 +232,15 @@ const ReviewsPage = () => {
                       <Star className="h-4 w-4 text-yellow-400 ml-1" />
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-xs truncate">{review.content}</TableCell>
+                  <TableCell className="max-w-xs truncate">
+                    {review.content}
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {review.tags.map((tag, index) => (
-                        <Badge key={index} variant="secondary">{tag}</Badge>
+                        <Badge key={index} variant="secondary">
+                          {tag}
+                        </Badge>
                       ))}
                     </div>
                   </TableCell>
@@ -194,7 +258,9 @@ const ReviewsPage = () => {
                         <DropdownMenuItem>Contact User</DropdownMenuItem>
                         <DropdownMenuItem>Edit Tags</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">Delete Review</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600">
+                          Delete Review
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -205,7 +271,7 @@ const ReviewsPage = () => {
         </CardContent>
       </Card>
     </div>
-  )
-}
+  );
+};
 
-export default ReviewsPage
+export default ReviewsPage;
