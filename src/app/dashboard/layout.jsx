@@ -20,7 +20,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 export default function DashboardLayout({ children }) {
   return (
     <SidebarProvider>
-      <div className="flex h-screen overflow-hidden w-screen">
+      <div className="flex min-h-screen overflow-hidden w-screen">
         <Sidebar />
         <div className="flex flex-col flex-1 overflow-hidden w-full">
           <header className="flex h-14 lg:h-[60px] w-full items-center gap-4 border-b bg-muted/40 px-6">
