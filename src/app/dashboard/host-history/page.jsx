@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import * as XLSX from "xlsx";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -161,7 +162,39 @@ export default function BookingsPage() {
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
+  const onGetExporProduct = async (title, worksheetname) => {
+    try {
+      setLoading(true);
 
+      // Check if the action result contains data and if it's an array
+      if (hosts && Array.isArray(hosts)) {
+        const dataToExport = hosts.map((pro) => ({
+          id: pro?.host?._id,
+          full_name: pro?.host?.firstName + " " + pro?.host?.lastName,
+          email: pro?.hostEmail,
+          contact: pro?.host?.phoneNumber,
+          total_property: pro?.totalProperty,
+          total_reviews: pro?.totalReviews,
+          kyc_status: pro?.host?.kyc?.isVerified ? "Verified" : "Pending",
+          average_rating: pro?.averageRating,
+        }));
+        // Create Excel workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils?.json_to_sheet(dataToExport);
+        XLSX.utils.book_append_sheet(workbook, worksheet, `${worksheetname}`);
+        // Save the workbook as an Excel file
+        XLSX.writeFile(workbook, `${title}.xlsx`);
+        console.log(`Exported data to ${title}.xlsx`);
+        setLoading(false);
+      } else {
+        setLoading(false);
+        console.log("#==================Export Error");
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log("#==================Export Error", error.message);
+    }
+  };
   const renderBookingTable = (hosts) => {
     if (loading) {
       // Skeleton UI for the table structure
@@ -226,10 +259,12 @@ export default function BookingsPage() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[180px]">Host</TableHead>
-            <TableHead className="w-[180px]">Email</TableHead>
+            <TableHead className="w-[180px]">Host Name</TableHead>
+            <TableHead className="w-[180px]">Email Address</TableHead>
             <TableHead>Contact</TableHead>
             <TableHead>Total Property</TableHead>
+
+            <TableHead className="w-[180px]">Kyc Status</TableHead>
             <TableHead>Total Reviews</TableHead>
             <TableHead>
               <Button variant="ghost" className="p-0 hover:bg-transparent">
@@ -266,7 +301,13 @@ export default function BookingsPage() {
                 </span>
               </TableCell>
               <TableCell>{item?.host?.phoneNumber}</TableCell>
-              <TableCell>{item?.totalProperty}</TableCell>
+              <TableCell>
+                <span className="">{item?.totalProperty}</span>
+              </TableCell>
+
+              <TableCell>
+                {item?.host?.kyc?.isVerified ? "Verified" : "Pending"}
+              </TableCell>
               <TableCell>{item?.totalReviews}</TableCell>
               <TableCell className="flex">
                 {" "}
@@ -323,6 +364,19 @@ export default function BookingsPage() {
   const sendData = async () => {
     await sendRejectionToUser();
   };
+
+  const exportCheckinDate = date.from.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckinDate = exportCheckinDate.split("/");
+  const exportCheckoutDate = date.to.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckoutDate = exportCheckoutDate.split("/");
   return (
     <div
       className={
@@ -336,7 +390,7 @@ export default function BookingsPage() {
           Hosts
         </h2>
         <div className="md:flex  items-center md:space-x-2">
-          <Popover>
+          {/* <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant={"outline"}
@@ -369,8 +423,16 @@ export default function BookingsPage() {
                 numberOfMonths={2}
               />
             </PopoverContent>
-          </Popover>
-          <Button className="mt-4 w-full md:mt-0 bg-primaryGreen text-white hover:bg-brightGreen rounded-md">
+          </Popover> */}
+          <Button
+            className="mt-4 w-full md:mt-0 bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+            onClick={() =>
+              onGetExporProduct(
+                `Host_History_${arrayCheckinDate[0]}${arrayCheckinDate[1]}${arrayCheckinDate[2]}_${arrayCheckoutDate[0]}${arrayCheckoutDate[1]}${arrayCheckoutDate[2]}`,
+                "HostHistoryExport"
+              )
+            }
+          >
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>

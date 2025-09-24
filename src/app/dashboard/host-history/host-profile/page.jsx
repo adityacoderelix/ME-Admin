@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Image from "next/image";
+import * as XLSX from "xlsx";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -82,9 +83,9 @@ export default function BookingsPage() {
   const [userEmail, setUserEmail] = React.useState();
   const [rejectDialogOpen, setRejectDialogOpen] = React.useState(false);
   const [bookingId, setBookingId] = React.useState(null);
-  const [selectPropertyType, setselectPropertyType] = React.useState("all");
+  const [selectPropertyType, setselectPropertyType] = React.useState("");
   const [propertyTypeSearch, setPropertyTypeSearch] = React.useState("");
-  const [selectKycStatus, setSelectKycStatus] = React.useState("");
+  const [selectPlaceType, setSelectPlaceType] = React.useState("");
   const searchParams = useSearchParams();
   const hostId = searchParams.get("hostId");
   // Simulate a 2 second loading delay to show the skeleton UI.
@@ -103,7 +104,7 @@ export default function BookingsPage() {
     if (data) {
       try {
         const response = await fetch(
-          `${API_URL}/properties/active/filter/${hostId}?search=${searchTerm}&kycStatus=${selectKycStatus}&propertyType=${selectPropertyType}`,
+          `${API_URL}/properties/active/filter/${hostId}?search=${searchTerm}&placeType=${selectPlaceType}&propertyType=${selectPropertyType}`,
           {
             method: "GET",
             headers: {
@@ -164,7 +165,7 @@ export default function BookingsPage() {
   }, []);
   React.useEffect(() => {
     fetchData();
-  }, [searchTerm, selectKycStatus, hostId, selectPropertyType]);
+  }, [searchTerm, selectPlaceType, hostId, selectPropertyType]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -250,6 +251,53 @@ export default function BookingsPage() {
       </div>
     );
   };
+
+  const onGetExporProduct = async (title, worksheetname) => {
+    try {
+      setLoading(true);
+
+      // Check if the action result contains data and if it's an array
+      if (propertys && Array.isArray(propertys)) {
+        const dataToExport = propertys.map((pro) => ({
+          id: pro?._id,
+          property_title: pro?.title,
+          city: pro?.address?.city,
+          state: pro?.address?.state,
+          pincode: pro?.address?.pincode,
+          price_per_night: pro?.basePrice,
+          property_type: pro?.propertyType,
+          place_type: pro?.placeType,
+        }));
+
+        // Create Excel workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils?.json_to_sheet(dataToExport);
+        XLSX.utils.book_append_sheet(workbook, worksheet, `${worksheetname}`);
+        // Save the workbook as an Excel file
+        XLSX.writeFile(workbook, `${title}.xlsx`);
+        console.log(`Exported data to ${title}.xlsx`);
+        setLoading(false);
+      } else {
+        setLoading(false);
+        console.log("#==================Export Error");
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log("#==================Export Error", error.message);
+    }
+  };
+  const exportCheckinDate = date.from.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckinDate = exportCheckinDate.split("/");
+  const exportCheckoutDate = date.to.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckoutDate = exportCheckoutDate.split("/");
   const renderBookingTable = (profile) => {
     if (loading) {
       // Skeleton UI for the table structure
@@ -262,15 +310,13 @@ export default function BookingsPage() {
       );
     }
 
-    if (!loading && !profile) {
+    if (!loading && propertys?.length == 0) {
       return (
         <div className="py-10 text-center">
           <h3 className="text-lg font-medium text-gray-900">
-            No bookings found.
+            No Property found.
           </h3>
-          <p className="mt-2 text-sm text-gray-500">
-            Looks like you haven't received any bookings yet.
-          </p>
+          <p className="mt-2 text-sm text-gray-500">Change the filter.</p>
         </div>
       );
     }
@@ -318,8 +364,8 @@ export default function BookingsPage() {
             <TableHead className="w-[180px]">Title</TableHead>
             <TableHead className="w-[180px]">Location</TableHead>
             <TableHead className="w-[180px]">Pincode</TableHead>
-            <TableHead>Kyc Status</TableHead>
-            <TableHead>Price</TableHead>
+
+            <TableHead>Base Price</TableHead>
             <TableHead>
               <Button variant="ghost" className="p-0 hover:bg-transparent">
                 <span>Type</span>
@@ -343,8 +389,8 @@ export default function BookingsPage() {
                 </span>
               </TableCell>
               <TableCell>{item?.address?.pincode}</TableCell>
-              <TableCell>{item?.kycStatus}</TableCell>
-              <TableCell>{item?.basePrice}</TableCell>
+
+              <TableCell>₹ {item?.basePrice}</TableCell>
               <TableCell>
                 {item?.propertyType[0].toUpperCase() +
                   item?.propertyType?.slice(1)}
@@ -390,8 +436,8 @@ export default function BookingsPage() {
       </Tabs>
 
       {/* Search + Calendar */}
-      <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-3 md:space-y-0">
-        <div className="flex-1">
+      <div className="lg:flex flex-col md:flex-row md:items-center lg:space-x-4 space-y-3 md:space-y-0">
+        <div className="flex lg:w-[300px]">
           <Label htmlFor="search" className="sr-only">
             Search reservations
           </Label>
@@ -404,60 +450,74 @@ export default function BookingsPage() {
           />
         </div>
 
-        <div className="flex md:w-[120px] lg:w-[280px] items-center">
-          <Select
-            value={selectPropertyType}
-            onValueChange={setselectPropertyType}
-          >
-            <SelectTrigger className="w-full  box-border bg-white">
-              <SelectValue placeholder="Host Email" />
-            </SelectTrigger>
-            <SelectContent className="w-full md:max-h-[200px] max-w-[calc(100vw-2rem)] bg-white ">
-              <div className="overflow-x-scroll">
-                <div className="py-2 px-1">
-                  <Input
-                    placeholder="Search Property Type..."
-                    value={propertyTypeSearch}
-                    onChange={(e) => setPropertyTypeSearch(e.target.value)}
-                    className="w-full"
-                    onKeyDown={(e) => e.stopPropagation()}
-                  />
+        <div className="md:pt-4 lg:pt-0 md:flex  items-center">
+          <div className="w-full">
+            <Select
+              value={selectPropertyType}
+              onValueChange={setselectPropertyType}
+            >
+              <SelectTrigger className="lg:w-[300px] box-border bg-white">
+                <SelectValue placeholder="Property Type" />
+              </SelectTrigger>
+              <SelectContent className="w-full md:max-h-[200px] max-w-[calc(100vw-2rem)] bg-white ">
+                <div className="overflow-x-scroll">
+                  <div className="py-2 px-1">
+                    <Input
+                      placeholder="Search Property Type..."
+                      value={propertyTypeSearch}
+                      onChange={(e) => setPropertyTypeSearch(e.target.value)}
+                      className="w-full"
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+
+                  <SelectItem value="all" selected>
+                    All
+                  </SelectItem>
+                  {properties
+                    .filter((item) =>
+                      item?.label
+                        ?.toLowerCase()
+                        ?.includes(propertyTypeSearch.toLowerCase())
+                    )
+                    .map((item) => (
+                      <SelectItem value={item?.route}>{item?.label}</SelectItem>
+                    ))}
                 </div>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="pt-4 md:pl-3 md:pt-0 ">
+            <Select value={selectPlaceType} onValueChange={setSelectPlaceType}>
+              <SelectTrigger className="lg:w-[200px]  box-border bg-white">
+                <SelectValue placeholder="Place Type" />
+              </SelectTrigger>
+              <SelectContent className="w-full max-w-[calc(100vw-2rem)] bg-white ">
+                <div className="overflow-x-scroll">
+                  <div className="py-2 px-1"></div>
 
-                <SelectItem value="all" selected>
-                  All
-                </SelectItem>
-                {properties
-                  .filter((item) =>
-                    item?.label
-                      ?.toLowerCase()
-                      ?.includes(propertyTypeSearch.toLowerCase())
-                  )
-                  .map((item) => (
-                    <SelectItem value={item?.route}>{item?.label}</SelectItem>
-                  ))}
-              </div>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex md:w-[120px] lg:w-[280px] items-center">
-          <Select value={selectKycStatus} onValueChange={setSelectKycStatus}>
-            <SelectTrigger className="w-full  box-border bg-white">
-              <SelectValue placeholder="Kyc Status" />
-            </SelectTrigger>
-            <SelectContent className="w-full max-w-[calc(100vw-2rem)] bg-white ">
-              <div className="overflow-x-scroll">
-                <div className="py-2 px-1"></div>
+                  <SelectItem value="all" selected>
+                    All
+                  </SelectItem>
 
-                <SelectItem value="all" selected>
-                  All
-                </SelectItem>
-
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-              </div>
-            </SelectContent>
-          </Select>
+                  <SelectItem value="entire">Entire</SelectItem>
+                  <SelectItem value="room">Room</SelectItem>
+                </div>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            className="w-full mt-4 lg:mt-0 md:ml-3 md:mt-0 bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+            onClick={() =>
+              onGetExporProduct(
+                `${guestProfile?.firstName}_${guestProfile?.lastName}_Property_List`,
+                `Property_List`
+              )
+            }
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
         </div>
       </div>
 
