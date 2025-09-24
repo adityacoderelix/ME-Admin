@@ -45,6 +45,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import * as XLSX from "xlsx";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   CalendarIcon,
@@ -348,7 +349,7 @@ export default function BookingsPage() {
               <TableCell>
                 {new Date(booking?.checkOut).toDateString().slice(3)}
               </TableCell>
-              <TableCell>{booking?.price}</TableCell>
+              <TableCell>₹ {booking?.price}</TableCell>
               <TableCell>
                 <StatusPill status={booking?.status} />
               </TableCell>
@@ -373,7 +374,65 @@ export default function BookingsPage() {
       <option value="cancelled">Cancelled</option>
     </select>
   );
+  const onGetExporProduct = async (title, worksheetname) => {
+    try {
+      setLoading(true);
 
+      // Check if the action result contains data and if it's an array
+      if (bookings && Array.isArray(bookings)) {
+        let dataToExport;
+        if (activeTab != "all") {
+          dataToExport = bookings
+            .filter((item) => item.status == activeTab)
+            .map((pro) => ({
+              id: pro?._id,
+              property_title: pro?.propertyId?.title,
+              check_in: new Date(pro?.checkIn).toLocaleDateString(),
+              check_out: new Date(pro?.checkOut).toLocaleDateString(),
+              price: pro?.price,
+              status: pro?.status,
+            }));
+        } else {
+          dataToExport = bookings.map((pro) => ({
+            id: pro?._id,
+            property_title: pro?.propertyId?.title,
+            check_in: new Date(pro?.checkIn).toLocaleDateString(),
+            check_out: new Date(pro?.checkOut).toLocaleDateString(),
+            price: pro?.price,
+            status: pro?.status,
+          }));
+        }
+
+        // Create Excel workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils?.json_to_sheet(dataToExport);
+        XLSX.utils.book_append_sheet(workbook, worksheet, `${worksheetname}`);
+        // Save the workbook as an Excel file
+        XLSX.writeFile(workbook, `${title}.xlsx`);
+        console.log(`Exported data to ${title}.xlsx`);
+        setLoading(false);
+      } else {
+        setLoading(false);
+        console.log("#==================Export Error");
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log("#==================Export Error", error.message);
+    }
+  };
+  const exportCheckinDate = date.from.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckinDate = exportCheckinDate.split("/");
+  const exportCheckoutDate = date.to.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckoutDate = exportCheckoutDate.split("/");
+  console.log("aaa");
   return (
     <div
       className={
@@ -403,7 +462,7 @@ export default function BookingsPage() {
       </Tabs>
 
       {/* Search + Calendar */}
-      <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-3 md:space-y-0">
+      <div className="lg:flex flex-col md:flex-row md:items-center lg:space-x-4 space-y-3 md:space-y-0">
         <div className="flex-1">
           <Label htmlFor="search" className="sr-only">
             Search reservations
@@ -417,12 +476,12 @@ export default function BookingsPage() {
           />
         </div>
 
-        <div className="flex items-center">
-          <Popover>
+        <div className="md:pt-4 lg:pt-0 md:flex items-center">
+          <Popover className="">
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className={`w-full sm:w-[250px] md:w-[280px] justify-start text-left font-normal ${
+                className={`w-full sm:w-full md:w-[280px] justify-start text-left font-normal ${
                   !date && "text-muted-foreground"
                 }`}
               >
@@ -452,7 +511,20 @@ export default function BookingsPage() {
               />
             </PopoverContent>
           </Popover>
+          <Button
+            className=" mt-4 w-full md:ml-4 md:mt-0 bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+            onClick={() =>
+              onGetExporProduct(
+                `${guestProfile?.firstName}_${guestProfile?.lastName}_Booking_History${arrayCheckinDate[0]}${arrayCheckinDate[1]}${arrayCheckinDate[2]}_${arrayCheckoutDate[0]}${arrayCheckoutDate[1]}${arrayCheckoutDate[2]}`,
+                `Booking_History`
+              )
+            }
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
         </div>
+
         <div className="overflow-hidden sm:hidden">
           <Select value={activeTab} onValueChange={setActiveTab}>
             <SelectTrigger className="w-full sm:w-[250px] md:w-[380px] box-border bg-white">

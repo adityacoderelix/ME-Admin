@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import * as XLSX from "xlsx";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -459,6 +460,56 @@ export default function BookingsPage() {
   const sendData = async () => {
     await sendRejectionToUser();
   };
+
+  const onGetExporProduct = async (title, worksheetname) => {
+    try {
+      setLoading(true);
+
+      // Check if the action result contains data and if it's an array
+      if (bookings && Array.isArray(bookings)) {
+        const dataToExport = bookings.map((pro) => ({
+          booking_id: pro?._id,
+          user_name: pro?.hostId?.firstName + " " + pro?.hostId?.lastName,
+          user_id: pro?.hostId?._id,
+          checkin: pro?.checkIn.split("T")[0],
+          checkout: pro?.checkOut.split("T")[0],
+          amount_paid: pro?.price,
+          nights: pro?.nights,
+          guests: pro?.guests,
+          adults: pro?.adults,
+          children: pro?.children,
+          status: pro?.status,
+        }));
+
+        // Create Excel workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils?.json_to_sheet(dataToExport);
+        XLSX.utils.book_append_sheet(workbook, worksheet, `${worksheetname}`);
+        // Save the workbook as an Excel file
+        XLSX.writeFile(workbook, `${title}.xlsx`);
+        console.log(`Exported data to ${title}.xlsx`);
+        setLoading(false);
+      } else {
+        setLoading(false);
+        console.log("#==================Export Error");
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log("#==================Export Error", error.message);
+    }
+  };
+  const exportCheckinDate = date.from.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckinDate = exportCheckinDate.split("/");
+  const exportCheckoutDate = date.to.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckoutDate = exportCheckoutDate.split("/");
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 bg-gray-200 min-h-screen">
       <div className="flex items-center justify-between space-y-2">
@@ -500,7 +551,15 @@ export default function BookingsPage() {
               />
             </PopoverContent>
           </Popover>
-          <Button className="bg-primaryGreen text-white hover:bg-brightGreen rounded-md">
+          <Button
+            className="bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+            onClick={() =>
+              onGetExporProduct(
+                `All_Booking_${arrayCheckinDate[0]}${arrayCheckinDate[1]}${arrayCheckinDate[2]}_${arrayCheckoutDate[0]}${arrayCheckoutDate[1]}${arrayCheckoutDate[2]}`,
+                "All_BookingExport"
+              )
+            }
+          >
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>

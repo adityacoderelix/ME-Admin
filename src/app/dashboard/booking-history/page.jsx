@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import * as XLSX from "xlsx";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -161,7 +162,42 @@ export default function BookingsPage() {
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const onGetExporProduct = async (title, worksheetname) => {
+    try {
+      setLoading(true);
 
+      // Check if the action result contains data and if it's an array
+      if (bookings && Array.isArray(bookings)) {
+        const dataToExport = bookings.map((pro) => ({
+          id: pro?.userId?._id,
+          full_name: pro?.userId?.firstName + " " + pro?.userId?.lastName,
+          total_amount_spend: pro?.totalAmountSpent,
+          booking_count: pro?.totalBookings,
+          review_count: pro?.totalReviews,
+          average_rating: pro?.userId?.averageRating,
+        }));
+        // Create Excel workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils?.json_to_sheet(dataToExport);
+        XLSX.utils.book_append_sheet(workbook, worksheet, `${worksheetname}`);
+        // Save the workbook as an Excel file
+        XLSX.writeFile(workbook, `${title}.xlsx`);
+        console.log(`Exported data to ${title}.xlsx`);
+        setLoading(false);
+      } else {
+        setLoading(false);
+        console.log("#==================Export Error");
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log("#==================Export Error", error.message);
+    }
+  };
   const renderBookingTable = (bookings) => {
     if (loading) {
       // Skeleton UI for the table structure
@@ -227,6 +263,7 @@ export default function BookingsPage() {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[180px]">Guest</TableHead>
+            <TableHead className="w-[180px]">Kyc Status</TableHead>
             <TableHead className="w-[180px]">Total Amount</TableHead>
             <TableHead>Total Bookings</TableHead>
             <TableHead>Total Reviews</TableHead>
@@ -259,6 +296,9 @@ export default function BookingsPage() {
                     booking.userId?.firstName + " " + booking?.userId?.lastName
                   )}
                 </span>
+              </TableCell>
+              <TableCell>
+                {booking?.userId?.kyc?.isVerified ? "Verified" : "Pending"}
               </TableCell>
               <TableCell>
                 <span title={booking?.totalAmountSpent}>
@@ -322,6 +362,18 @@ export default function BookingsPage() {
   const sendData = async () => {
     await sendRejectionToUser();
   };
+  const exportCheckinDate = date.from.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckinDate = exportCheckinDate.split("/");
+  const exportCheckoutDate = date.to.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+  const arrayCheckoutDate = exportCheckoutDate.split("/");
   return (
     <div
       className={
@@ -369,7 +421,15 @@ export default function BookingsPage() {
               />
             </PopoverContent>
           </Popover>
-          <Button className="mt-4 w-full md:mt-0 bg-primaryGreen text-white hover:bg-brightGreen rounded-md">
+          <Button
+            className="mt-4 w-full md:mt-0 bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+            onClick={() =>
+              onGetExporProduct(
+                `Guest_Booking_History_${arrayCheckinDate[0]}${arrayCheckinDate[1]}${arrayCheckinDate[2]}_${arrayCheckoutDate[0]}${arrayCheckoutDate[1]}${arrayCheckoutDate[2]}`,
+                "GuestBookingHistoryExport"
+              )
+            }
+          >
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
