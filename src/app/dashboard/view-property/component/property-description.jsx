@@ -146,13 +146,17 @@ export default function PropertyDescription({ description, property }) {
             <div className="">
               {" "}
               The check in time is{" "}
-              {property?.checkinTime > 12
-                ? changeTime(property?.checkinTime)
-                : `${property?.checkinTime} a.m.`}{" "}
+              {property?.checkinTime
+                ? property?.checkinTime > 12
+                  ? changeTime(property?.checkinTime)
+                  : `${property?.checkinTime} a.m.`
+                : "TBD"}{" "}
               and the check out time is{" "}
-              {property?.checkinTime > 12
-                ? changeTime(property?.checkoutTime)
-                : `${property?.checkoutTime} a.m.`}
+              {property?.checkinTime
+                ? property?.checkinTime > 12
+                  ? changeTime(property?.checkoutTime)
+                  : `${property?.checkoutTime} a.m.`
+                : "TBD"}
               .
             </div>
           </p>
