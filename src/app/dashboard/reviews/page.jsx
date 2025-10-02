@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -22,6 +23,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -30,7 +46,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Star, MoreHorizontal } from "lucide-react";
-
+import { useEffect } from "react";
+import { addMonths, format } from "date-fns";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 // Mock data for reviews
 const reviews = [
   {
@@ -86,21 +106,179 @@ const reviews = [
 ];
 
 const ReviewsPage = () => {
-  const [selectedRating, setSelectedRating] = useState("All");
-  const [selectedProperty, setSelectedProperty] = useState("All");
+  const [selectedProperty, setSelectedProperty] = useState("all");
+  const [selectedRating, setSelectedRating] = useState("all");
+  const [reviewData, setReviewData] = useState([]);
+  const [search, setSearch] = useState("");
+  const [properties, setProperties] = useState();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [propertyId, setPropertyId] = useState();
+  const [rating, setRating] = useState();
+  const [reviewHide, setReviewHide] = useState("");
+  const [bookingId, setBookingId] = useState("");
+  const [date, setDate] = useState({
+    from: addMonths(new Date(), -1),
+    to: new Date(),
+  });
+  const router = useRouter();
+  const [flag, setFlag] = useState(false);
+  const fetchData = async () => {
+    try {
+      const getUserId = await localStorage.getItem("userId");
+      const userId = JSON.parse(getUserId);
+      const from = date.from ? new Date(date.from).toLocaleDateString() : "";
 
-  const filteredReviews = reviews.filter(
-    (review) =>
-      (selectedRating === "All" || review.rating >= parseInt(selectedRating)) &&
-      (selectedProperty === "All" || review.propertyName === selectedProperty)
-  );
+      const to = date.to ? new Date(date.to).toLocaleDateString() : "";
+      console.log(from, to);
+      const getLocalData = await localStorage.getItem("token");
+      const data = JSON.parse(getLocalData);
+      if (data) {
+        const response = await fetch(
+          `${API_URL}/hostData/review/admin?flagged=${flag}&stars=${selectedRating}&search=${search}&property=${selectedProperty}&checkin=${from}&checkout=${to}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${data}`,
+            },
+          }
+        );
 
-  const averageRating =
-    reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
-  const totalReviews = reviews.length;
+        if (!response.ok) {
+          toast.error("Error in fetching data");
+        }
+        const result = await response.json();
+        console.log("what now", result);
+        const final = await result;
+        setReviewData(result);
+
+        return result.data;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const fetchProperties = async () => {
+    try {
+      const getUserId = await localStorage.getItem("userId");
+      const userId = JSON.parse(getUserId);
+      const getLocalData = await localStorage.getItem("token");
+      const data = JSON.parse(getLocalData);
+      if (data) {
+        const response = await fetch(`${API_URL}/properties/admin/active`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data}`,
+          },
+        });
+        if (!response.ok) {
+          toast.error("Error in fetching data");
+        }
+        const result = await response.json();
+        setProperties(result.data);
+
+        return result.data;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  function checkLength(value) {
+    if (value?.length > 15) {
+      return value.substring(0, 15) + "…";
+    }
+    return value;
+  }
+
+  const updateReview = async () => {
+    try {
+      const getUserId = await localStorage.getItem("userId");
+      const userId = JSON.parse(getUserId);
+      const from = date.from ? new Date(date.from).toLocaleDateString() : "";
+
+      const to = date.to ? new Date(date.to).toLocaleDateString() : "";
+      console.log(from, to);
+      const getLocalData = await localStorage.getItem("token");
+      const data = JSON.parse(getLocalData);
+      // const review = reviewData
+      //   ? reviewData?.data?.filter((item) => item?.bookingId?._id == bookingId)
+      //   : [];
+      if (data) {
+        const response = await fetch(
+          `${API_URL}/review/update?bookingId=${bookingId}&status=${reviewHide}&propertyId=${propertyId}&rating=${rating}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${data}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          toast.error("Error in fetching data");
+        }
+        setDialogOpen(false);
+        toast.success("Successfully updated your request");
+        await fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+  useEffect(() => {
+    fetchData();
+  }, [selectedRating, selectedProperty, search, date, flag]);
+
+  const handleModal = (review, value) => {
+    setDialogOpen(true);
+    setReviewHide(value);
+    setBookingId(review?.bookingId?._id);
+    setPropertyId(review?.property?._id);
+    setRating(review?.rating);
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={() => {
+          setDialogOpen();
+          setReviewHide("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {reviewHide.charAt(0).toUpperCase() + reviewHide.slice(1)} Review
+              Hiding
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to {reviewHide} this request? This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant={"outline"}
+              onClick={() => {
+                setDialogOpen(false);
+                setReviewHide("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={updateReview}>
+              Yes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <h1 className="text-3xl font-bold">Review Management</h1>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -112,7 +290,9 @@ const ReviewsPage = () => {
             <Star className="h-4 w-4 text-yellow-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
+            <div className="text-2xl font-bold">
+              {reviewData?.averageRating ? reviewData?.averageRating : "N/A"}
+            </div>
             <p className="text-xs text-muted-foreground">Out of 5 stars</p>
           </CardContent>
         </Card>
@@ -133,7 +313,9 @@ const ReviewsPage = () => {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalReviews}</div>
+            <div className="text-2xl font-bold">
+              {reviewData?.reviewCount ? reviewData?.reviewCount : "N/A"}
+            </div>
             <p className="text-xs text-muted-foreground">
               Across all properties
             </p>
@@ -147,46 +329,83 @@ const ReviewsPage = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <Label htmlFor="rating">Minimum Rating</Label>
-              <Select value={selectedRating} onValueChange={setSelectedRating}>
-                <SelectTrigger id="rating">
-                  <SelectValue placeholder="Select rating" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Ratings</SelectItem>
-                  <SelectItem value="5">5 Stars</SelectItem>
-                  <SelectItem value="4">4 Stars & Above</SelectItem>
-                  <SelectItem value="3">3 Stars & Above</SelectItem>
-                  <SelectItem value="2">2 Stars & Above</SelectItem>
-                  <SelectItem value="1">1 Star & Above</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1 min-w-[200px]">
-              <Label htmlFor="property">Property</Label>
+            <div className="flex grid w-full gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Input
+                placeholder="Search reviews..."
+                className=""
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
               <Select
                 value={selectedProperty}
                 onValueChange={setSelectedProperty}
               >
-                <SelectTrigger id="property">
-                  <SelectValue placeholder="Select property" />
+                <SelectTrigger className="">
+                  <SelectValue placeholder="Filter by property" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All">All Properties</SelectItem>
-                  {Array.from(
-                    new Set(reviews.map((review) => review.propertyName))
-                  ).map((property) => (
-                    <SelectItem key={property} value={property}>
-                      {property}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All Properties</SelectItem>
+
+                  {properties
+                    ? properties.map((item) => (
+                        <SelectItem value={item?.title}>
+                          {item?.title}
+                        </SelectItem>
+                      ))
+                    : null}
+                  {/* <SelectItem value="beachside">Beachside Villa</SelectItem>
+                       <SelectItem value="mountain">Mountain Retreat</SelectItem>
+                       <SelectItem value="city">City Center Apartment</SelectItem> */}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex-1 min-w-[200px]">
-              <Label htmlFor="search">Search</Label>
-              <Input id="search" placeholder="Search reviews..." />
+              <Select value={selectedRating} onValueChange={setSelectedRating}>
+                <SelectTrigger className="">
+                  <SelectValue placeholder="Filter by rating" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Ratings</SelectItem>
+                  <SelectItem value="5">5 Stars</SelectItem>
+                  <SelectItem value="4">4 Stars</SelectItem>
+                  <SelectItem value="3">3 Stars</SelectItem>
+                  <SelectItem value="2">2 Stars</SelectItem>
+                  <SelectItem value="1">1 Star</SelectItem>
+                </SelectContent>
+              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="date"
+                    variant={"outline"}
+                    className={cn(
+                      " justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    {date?.from ? (
+                      date.to ? (
+                        <>
+                          {format(date.from, "LLL dd, y")} -{" "}
+                          {format(date.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(date.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={date?.from}
+                    selected={date}
+                    onSelect={setDate}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardContent>
@@ -194,7 +413,35 @@ const ReviewsPage = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Review List</CardTitle>
+          <div className="flex align-center justify-between">
+            <div>
+              <CardTitle>Review List</CardTitle>
+            </div>
+            <div
+              className={`${
+                flag
+                  ? "ring-lightGray ring-1 transition-all"
+                  : "ring-gray-300 transition-all"
+              } flex items-center px-3 py-3 gap-x-2   bg-gray-50 ring-1 rounded-full`}
+            >
+              <button
+                className={`w-12 h-5 hover:ring-absoluteDark transition-all  flex items-center rounded-full p-1  duration-300 
+                ${
+                  flag
+                    ? "bg-primaryGreen justify-end"
+                    : "bg-solidGray justify-start border-primaryGreen"
+                }
+              `}
+                onClick={() => setFlag(!flag)}
+                aria-label={flag ? "All" : "Flagged"}
+              >
+                <div className="bg-white w-3 h-3 rounded-full shadow-md" />
+              </button>
+              <span className="text-sm text-absoluteDark font-medium whitespace-nowrap">
+                {flag ? "All Data" : "Flagged"}
+              </span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -205,27 +452,45 @@ const ReviewsPage = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Rating</TableHead>
                 <TableHead>Review</TableHead>
-                <TableHead>Tags</TableHead>
+
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredReviews.map((review) => (
-                <TableRow key={review.id}>
-                  <TableCell className="font-medium">
-                    {review.propertyName}
+              {reviewData?.data?.map((review) => (
+                <TableRow
+                  className={
+                    review.bookingId.flag && review.hideStatus == "pending"
+                      ? "bg-green-100"
+                      : ""
+                  }
+                  key={review?._id}
+                >
+                  <TableCell
+                    className="font-medium"
+                    title={review?.property?.title}
+                  >
+                    {checkLength(review?.property?.title)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell
+                    title={
+                      review?.user?.firstName + " " + review?.user?.lastName
+                    }
+                  >
                     <div className="flex items-center">
                       <img
                         src={review.userAvatar}
                         alt={review.userName}
                         className="w-8 h-8 rounded-full mr-2"
                       />
-                      {review.userName}
+                      {checkLength(
+                        review?.user?.firstName + " " + review?.user?.lastName
+                      )}
                     </div>
                   </TableCell>
-                  <TableCell>{review.date}</TableCell>
+                  <TableCell>
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       {review.rating}
@@ -233,17 +498,9 @@ const ReviewsPage = () => {
                     </div>
                   </TableCell>
                   <TableCell className="max-w-xs truncate">
-                    {review.content}
+                    {checkLength(review.content)}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {review.tags.map((tag, index) => (
-                        <Badge key={index} variant="secondary">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
+
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -255,11 +512,28 @@ const ReviewsPage = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem>View Full Review</DropdownMenuItem>
-                        <DropdownMenuItem>Contact User</DropdownMenuItem>
-                        <DropdownMenuItem>Edit Tags</DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/booking-history/user-profile?userId=${review?.user?._id}`
+                            )
+                          }
+                        >
+                          Contact User
+                        </DropdownMenuItem>
+                        {/* <DropdownMenuItem>Edit Tags</DropdownMenuItem> */}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">
-                          Delete Review
+                        <DropdownMenuItem
+                          onClick={() => handleModal(review, "accept")}
+                        >
+                          Accept Hide
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => handleModal(review, "reject")}
+                        >
+                          Reject Hide
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
