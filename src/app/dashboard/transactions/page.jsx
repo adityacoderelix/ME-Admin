@@ -1,9 +1,15 @@
-"use client"
+"use client";
 
-import * as React from 'react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -11,27 +17,39 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { ArrowDownIcon, ArrowUpIcon, CalendarIcon, Download, Filter, Search, SortAsc } from "lucide-react"
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CalendarIcon,
+  Download,
+  Filter,
+  Search,
+  SortAsc,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { format } from "date-fns"
+} from "@/components/ui/select";
+import { addMonths, format } from "date-fns";
 
 // Transaction entry for the booking "Listing for Goa" by guest "Divya Yash"
 const transactions = [
@@ -43,22 +61,69 @@ const transactions = [
     date: format(new Date(), "PPpp"), // current date time
     guest: "Divya Yash",
     property: "Listing for Goa",
-    method: "Net Banking"
-  }
-]
-
+    method: "Net Banking",
+  },
+];
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 export default function TransactionsPage() {
-  const [date, setDate] = React.useState()
-  const [searchTerm, setSearchTerm] = React.useState("")
-  const [transactionType, setTransactionType] = React.useState("all")
+  const [date, setDate] = React.useState({
+    from: addMonths(new Date(), -1),
+    to: new Date(),
+  });
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [transactionType, setTransactionType] = React.useState("all");
+  const [payDetails, setPayDetails] = React.useState([]);
+  const [filterList, setFilterList] = React.useState("");
 
-  const filteredTransactions = transactions.filter(transaction => 
-    (transaction.guest?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     transaction.property.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (transactionType === "all" || transaction.type.toLowerCase() === transactionType.toLowerCase())
-  )
+  // const filteredTransactions = transactions.filter(
+  //   (transaction) =>
+  //     (transaction.guest?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //       transaction.property
+  //         .toLowerCase()
+  //         .includes(searchTerm.toLowerCase())) &&
+  //     (transactionType === "all" ||
+  //       transaction.type.toLowerCase() === transactionType.toLowerCase())
+  // );
+  const fetchData = async () => {
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
 
-  const renderTransactionTable = (transactions) => (
+    const from = date?.from ? new Date(date.from).toLocaleDateString() : null;
+    const to = date?.to ? new Date(date.to).toLocaleDateString() : null;
+
+    if (data) {
+      try {
+        const response = await fetch(
+          `${API_URL}/payment/fetch?paymentType=${transactionType}&search=${searchTerm}&searchList=${filterList}&from=${from}&to=${to}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${data}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (response.status === 401) {
+          // Token expired or missing
+          localStorage.removeItem("token");
+          localStorage.removeItem("userId");
+          router.push("/"); // redirect to login
+          return;
+        }
+        const result = await response.json();
+
+        const final = await result.data;
+        setPayDetails(final);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+  console.log("s", payDetails);
+  React.useEffect(() => {
+    fetchData();
+  }, [transactionType, searchTerm, filterList, date]);
+  const renderTransactionTable = (payDetails) => (
     <Table>
       <TableHeader>
         <TableRow>
@@ -78,30 +143,46 @@ export default function TransactionsPage() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {transactions.map((transaction) => (
-          <TableRow key={transaction.id}>
-            <TableCell className="font-medium">#{transaction.id}</TableCell>
+        {payDetails?.map((transaction) => (
+          <TableRow key={transaction?.id}>
+            <TableCell className="font-medium">
+              #{transaction?.paymentId}
+            </TableCell>
             <TableCell>
-              <Badge variant={transaction.type === 'Pay-in' ? 'default' : transaction.type === 'Payout' ? 'secondary' : 'destructive'}>
-                {transaction.type === 'Pay-in' ? <ArrowDownIcon className="mr-1 h-3 w-3 inline" /> : <ArrowUpIcon className="mr-1 h-3 w-3 inline" />}
-                {transaction.type}
+              <Badge
+                variant={
+                  transaction?.paymentType === "pay-in"
+                    ? "default"
+                    : transaction?.paymentType === "pay-out"
+                      ? "secondary"
+                      : "destructive"
+                }
+              >
+                {transaction?.type === "pay-in" ? (
+                  <ArrowDownIcon className="mr-1 h-3 w-3 inline" />
+                ) : (
+                  <ArrowUpIcon className="mr-1 h-3 w-3 inline" />
+                )}
+                {transaction?.paymentType}
               </Badge>
             </TableCell>
-            <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
+            <TableCell>₹{Number(transaction?.amount) / 100}</TableCell>
             <TableCell>
-              <Badge variant={transaction.status === 'Completed' ? 'success' : 'warning'}>
-                {transaction.status}
+              <Badge
+                variant={transaction?.status === "paid" ? "success" : "warning"}
+              >
+                {transaction?.status}
               </Badge>
             </TableCell>
-            <TableCell>{transaction.date}</TableCell>
-            <TableCell>{transaction.guest}</TableCell>
-            <TableCell>{transaction.property}</TableCell>
-            <TableCell>{transaction.method}</TableCell>
+            <TableCell>{transaction?.createdAt.split("T")[0]}</TableCell>
+            <TableCell>{transaction?.customerDetails?.name}</TableCell>
+            <TableCell>{transaction?.propertyId?.title}</TableCell>
+            <TableCell>{transaction?.paymentMethod}</TableCell>
           </TableRow>
         ))}
       </TableBody>
     </Table>
-  )
+  );
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -115,14 +196,27 @@ export default function TransactionsPage() {
                 className={`w-[280px] justify-start text-left font-normal ${!date && "text-muted-foreground"}`}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Pick a date</span>}
+                {date?.from ? (
+                  date?.to ? (
+                    <>
+                      {format(date.from, "LLL dd, y")} -{" "}
+                      {format(date.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(date.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date</span>
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
               <Calendar
-                mode="single"
+                mode="range"
                 selected={date}
+                defaultMonth={date?.from}
                 onSelect={setDate}
+                numberOfMonths={2}
                 initialFocus
               />
             </PopoverContent>
@@ -133,12 +227,16 @@ export default function TransactionsPage() {
           </Button>
         </div>
       </div>
-      <Tabs defaultValue="all" className="space-y-4" onValueChange={setTransactionType}>
+      <Tabs
+        defaultValue="all"
+        className="space-y-4"
+        onValueChange={setTransactionType}
+      >
         <TabsList>
           <TabsTrigger value="all">All Transactions</TabsTrigger>
           <TabsTrigger value="pay-in">Pay-ins</TabsTrigger>
-          <TabsTrigger value="payout">Payouts</TabsTrigger>
-          <TabsTrigger value="refund">Refunds</TabsTrigger>
+          <TabsTrigger value="pay-out">Payouts</TabsTrigger>
+          <TabsTrigger value="refunded">Refunds</TabsTrigger>
         </TabsList>
         <div className="flex items-center space-x-2">
           <div className="flex-1">
@@ -152,7 +250,7 @@ export default function TransactionsPage() {
               />
             </div>
           </div>
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <Filter className="mr-2 h-4 w-4" />
@@ -162,12 +260,12 @@ export default function TransactionsPage() {
             <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuLabel>Filter by</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* <DropdownMenuCheckboxItem>Date Range</DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem>Date Range</DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem>Amount</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Status</DropdownMenuCheckboxItem> */}
+              <DropdownMenuCheckboxItem>Status</DropdownMenuCheckboxItem>
             </DropdownMenuContent>
-          </DropdownMenu>
-          <Select>
+          </DropdownMenu> */}
+          <Select value={filterList} onValueChange={setFilterList}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
@@ -186,11 +284,9 @@ export default function TransactionsPage() {
               View and manage financial transactions
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {renderTransactionTable(filteredTransactions)}
-          </CardContent>
+          <CardContent>{renderTransactionTable(payDetails)}</CardContent>
         </Card>
       </Tabs>
     </div>
-  )
+  );
 }
