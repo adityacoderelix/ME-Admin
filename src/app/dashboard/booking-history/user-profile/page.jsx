@@ -96,8 +96,8 @@ export default function BookingsPage() {
     const getLocalData = await localStorage.getItem("token");
     const data = JSON.parse(getLocalData);
 
-    const from = date?.from ? getDate(date.from) : null;
-    const to = date?.to ? getDate(date.to) : null;
+    const from = date?.from ? new Date(date.from).toLocaleDateString() : "";
+    const to = date?.to ? new Date(date.to).toLocaleDateString() : "";
 
     if (data) {
       try {
