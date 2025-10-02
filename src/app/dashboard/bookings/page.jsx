@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import * as XLSX from "xlsx";
+import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -28,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { properties } from "../../../utils/property-type";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -61,7 +63,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { addDays, addMonths, format } from "date-fns";
+import { addDays, addMonths, differenceInDays, format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -78,6 +80,7 @@ import { toast } from "sonner";
 //     status: "Confirmed",
 //   },
 // ];
+
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 export default function BookingsPage() {
   const [bookings, setBookings] = React.useState([
@@ -93,28 +96,115 @@ export default function BookingsPage() {
   ]);
   const router = useRouter();
   const [date, setDate] = React.useState({
+    from: new Date(),
+    to: addMonths(new Date(), 1),
+  });
+  const [modalDate, setModalDate] = React.useState({
     from: addMonths(new Date(), -1),
     to: new Date(),
   });
+  const [errors, setErrors] = React.useState({});
+  const [guestCount, setGuestCount] = React.useState("");
+  const [adultCount, setAdultCount] = React.useState("");
+  const [childrenCount, setChildrenCount] = React.useState("");
+  const [propertyType, setPropertyType] = React.useState("");
+  const [propertyTypeSearch, setPropertyTypeSearch] = React.useState("");
+  const [modifyData, setModifyData] = React.useState({});
   const [selectedBookings, setSelectedBookings] = React.useState([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [activeTab, setActiveTab] = React.useState("all");
   const [loading, setLoading] = React.useState(true);
+  const [propertyList, setPropertyList] = React.useState([]);
   const [userEmail, setUserEmail] = React.useState();
   const [rejectDialogOpen, setRejectDialogOpen] = React.useState(false);
+  const [modifyDialogOpen, setModifyDialogOpen] = React.useState(false);
   const [bookingId, setBookingId] = React.useState(null);
-  // Simulate a 2 second loading delay to show the skeleton UI.
-  const getDate = (item) => {
-    const d = new Date(item);
-    d.setUTCHours(0, 0, 0, 0);
-    return d.toISOString();
+  const [catchData, setCatchData] = React.useState();
+  console.log("cuy", catchData);
+  const submitModifyData = async () => {
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
+
+    const from = modalDate?.from
+      ? new Date(modalDate.from).toLocaleDateString()
+      : null;
+    const to = modalDate?.to
+      ? new Date(modalDate.to).toLocaleDateString()
+      : null;
+    console.log("here", from);
+    if (data) {
+      try {
+        const response = await fetch(
+          `${API_URL}/booking/admin-modify?guest=${guestCount}&hostEmail=${catchData?.hostId?.email}&userEmail=${catchData?.userId?.email}&bookingId=${bookingId}&property=${propertyType}&adults=${adultCount}&children=${childrenCount}&from=${from}&to=${to}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${data}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (response.status === 401) {
+          // Token expired or missing
+          localStorage.removeItem("token");
+          localStorage.removeItem("userId");
+          router.push("/"); // redirect to login
+          return;
+        }
+        toast.success("You have modified the booking");
+        await fetchData();
+        propertyType("");
+        propertyTypeSearch("");
+        guestCount("");
+      } catch (error) {
+        console.error(error);
+      }
+    }
   };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newErrors = {};
+
+    if (!guestCount || Number(guestCount) < 1) {
+      newErrors.guestCount = "Guest count must be at least 1";
+    }
+    if (Number(guestCount) > Number(catchData?.propertyId?.guests)) {
+      newErrors.guestCount = `Guest count is max ${catchData?.propertyId?.guests}`;
+    }
+
+    if (!adultCount || Number(adultCount) < 1) {
+      newErrors.adultCount = "At least 1 adult required";
+    }
+
+    if (Number(adultCount) + Number(childrenCount) !== Number(guestCount)) {
+      newErrors.totalMismatch = "Adult + Children must be equal to Guest count";
+    }
+    if (
+      differenceInDays(new Date(modalDate.to), new Date(modalDate.from)) !=
+      Number(catchData.nights)
+    ) {
+      newErrors.dateMismatch = "Date difference is more than original booking";
+      toast.error(`Date difference is more than original booking`);
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length === 0) {
+      // ✅ If no errors, proceed with submission
+
+      submitModifyData();
+
+      setModifyDialogOpen(false);
+    }
+  };
+
+  console.log("sup", catchData);
   const fetchData = async () => {
     const getLocalData = await localStorage.getItem("token");
     const data = JSON.parse(getLocalData);
 
-    const from = date?.from ? getDate(date.from) : null;
-    const to = date?.to ? getDate(date.to) : null;
+    const from = date?.from ? new Date(date.from).toLocaleDateString() : null;
+    const to = date?.to ? new Date(date.to).toLocaleDateString() : null;
     console.log("here", from);
     if (data) {
       try {
@@ -144,10 +234,41 @@ export default function BookingsPage() {
       }
     }
   };
+
+  const fetchProperty = async () => {
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
+
+    if (data) {
+      try {
+        const response = await fetch(`${API_URL}/properties/id-and-name`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${data}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (response.status === 401) {
+          // Token expired or missing
+          localStorage.removeItem("token");
+          localStorage.removeItem("userId");
+          router.push("/"); // redirect to login
+          return;
+        }
+        const result = await response.json();
+        setPropertyList(result.data);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  };
   React.useEffect(() => {
     fetchData();
   }, [searchTerm, activeTab, date]);
 
+  React.useEffect(() => {
+    fetchProperty();
+  }, []);
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -215,9 +336,7 @@ export default function BookingsPage() {
   //   };
   //   fetchData();
   // }, []);
-  console.log("new", bookings);
-  console.log("tab", activeTab);
-  console.log("date", date);
+
   // const filteredBookings = bookings.filter(
   //   (booking) =>
   //     (booking.guest.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -255,7 +374,7 @@ export default function BookingsPage() {
   //     console.error(err);
   //   }
   // };
-
+  console.log("hsss", propertyType);
   const sendRejectionToUser = async () => {
     try {
       console.log("nn", bookingId);
@@ -277,6 +396,7 @@ export default function BookingsPage() {
       }
 
       setBookingId(null);
+
       setRejectDialogOpen(false);
       toast.success("Booking successfully cancelled");
       fetchData();
@@ -340,6 +460,17 @@ export default function BookingsPage() {
       setBookingId(booking._id);
     };
 
+    const handleModifyModal = (booking) => {
+      setModifyDialogOpen(true);
+
+      setBookingId(booking._id);
+      setCatchData(booking);
+
+      setModalDate({
+        from: new Date(booking.checkIn.split("T")[0]),
+        to: new Date(booking.checkOut.split("T")[0]),
+      });
+    };
     function checkLength(value) {
       if (value?.length > 15) {
         return value.substring(0, 15) + "…";
@@ -437,6 +568,15 @@ export default function BookingsPage() {
                       Send message
                     </DropdownMenuItem> */}
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className=""
+                      onClick={() => {
+                        handleModifyModal(booking);
+                      }}
+                    >
+                      Modify
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     {booking.status != "rejected" &&
                     booking.status != "cancelled" ? (
                       <DropdownMenuItem
@@ -510,8 +650,183 @@ export default function BookingsPage() {
     year: "numeric",
   });
   const arrayCheckoutDate = exportCheckoutDate.split("/");
+
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 bg-gray-200 min-h-screen">
+      {modifyDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Modify Booking
+              </h2>
+              <button
+                onClick={() => setModifyDialogOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form className="p-6 space-y-6" onSubmit={(e) => handleSubmit(e)}>
+              <div>
+                <label className="block text-sm font-medium text-gray-700  mb-3">
+                  Change Property
+                </label>
+                <Select value={propertyType} onValueChange={setPropertyType}>
+                  <SelectTrigger className="w-full mb-4 box-border bg-white">
+                    <SelectValue placeholder="Property Type" />
+                  </SelectTrigger>
+                  <SelectContent className="w-full md:max-h-[200px] max-w-[calc(100vw-2rem)] bg-white ">
+                    <div className="overflow-x-scroll">
+                      <div className="py-2 px-1">
+                        <Input
+                          placeholder="Search Property Type..."
+                          value={propertyTypeSearch}
+                          onChange={(e) =>
+                            setPropertyTypeSearch(e.target.value)
+                          }
+                          className="w-full"
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+
+                      <SelectItem value="all" selected>
+                        Default
+                      </SelectItem>
+                      {propertyList
+                        .filter((item) =>
+                          item?.title
+                            ?.toLowerCase()
+                            ?.includes(propertyTypeSearch.toLowerCase())
+                        )
+                        .map((item) => (
+                          <SelectItem value={item?._id}>
+                            {item?.title}
+                          </SelectItem>
+                        ))}
+                    </div>
+                  </SelectContent>
+                </Select>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Guest Count (max : {catchData?.propertyId?.guests})
+                </label>
+                <Input
+                  id="guestCount"
+                  className={`bg-white mb-1 border ${
+                    errors.guestCount ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="Enter guest count..."
+                  value={guestCount}
+                  type="number"
+                  onChange={(e) => setGuestCount(e.target.value)}
+                />
+                {errors.guestCount && (
+                  <p className="text-red-500 text-sm">{errors.guestCount}</p>
+                )}
+                <div className="py-4">
+                  <div className={`flex  ${errors.totalMismatch}`}>
+                    <div className="pr-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Adult Count
+                      </label>
+                      <Input
+                        id="adultCount"
+                        className={`bg-white mb-1 border ${
+                          errors.adultCount || errors.totalMismatch
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                        placeholder="Enter adult count..."
+                        value={adultCount}
+                        type="number"
+                        onChange={(e) => setAdultCount(e.target.value)}
+                      />
+                      {errors.adultCount && (
+                        <p className="text-red-500 text-sm">
+                          {errors.adultCount}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Children Count
+                      </label>
+                      <Input
+                        id="childrenCount"
+                        className={`bg-white mb-1 border ${
+                          errors.totalMismatch
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                        placeholder="Enter children count..."
+                        value={childrenCount}
+                        type="number"
+                        onChange={(e) => setChildrenCount(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  {errors.totalMismatch && (
+                    <p className="text-red-500 text-sm">
+                      {errors.totalMismatch}
+                    </p>
+                  )}
+                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Change Date
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={`w-full justify-start text-left font-normal ${
+                        !modalDate && "text-muted-foreground"
+                      }`}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {modalDate?.from ? (
+                        modalDate?.to ? (
+                          <>
+                            {format(new Date(modalDate?.from), "LLL dd, y")} -{" "}
+                            {format(new Date(modalDate?.to), "LLL dd, y")}
+                          </>
+                        ) : (
+                          format(modalDate?.from, "LLL dd, y")
+                        )
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={modalDate?.from}
+                      selected={modalDate}
+                      onSelect={setModalDate}
+                      numberOfMonths={1}
+                    />
+                  </PopoverContent>
+                  {errors.dateMismatch && (
+                    <p className="text-red-500 text-sm">
+                      {errors.dateMismatch}
+                    </p>
+                  )}
+                </Popover>
+                <div className="flex mt-8 justify-end">
+                  <Button
+                    type="submit"
+                    className="bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+                  >
+                    Confirm
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-semibold font-bricolage tracking-tight">
           Bookings
@@ -547,7 +862,7 @@ export default function BookingsPage() {
                 defaultMonth={date?.from}
                 selected={date}
                 onSelect={setDate}
-                numberOfMonths={2}
+                numberOfMonths={1}
               />
             </PopoverContent>
           </Popover>
@@ -587,6 +902,7 @@ export default function BookingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <div className="flex-1">
         <Label htmlFor="search" className="sr-only">
           Search reservations
