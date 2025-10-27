@@ -82,28 +82,55 @@ const StatusPill = ({ status }) => {
     </span>
   );
 };
+const StatusKyc = ({ kyc, bank }) => {
+  const getStatusColor = (kyc, bank) => {
+    console.log("ssss", bank, kyc);
+    if (kyc == "completed" && bank == true) {
+      return "bg-green-100 text-green-800";
+    } else {
+      return "bg-red-100 text-red-800";
+    }
+  };
 
+  return (
+    <span
+      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(kyc, bank)}`}
+    >
+      {kyc == "completed" && bank === true ? "Completed" : "Pending"}
+    </span>
+  );
+};
 // -------------- API Helpers -----------------
 const getFilteredListings = async (page = 1, limit = 10, status = "all") => {
-  try {
-    const response = await axios.get(
-      `${API_URL}/properties/admin/filtered-listings`,
-      {
-        params: { page, limit, status },
+  const getLocalData = await localStorage.getItem("token");
+  const data = JSON.parse(getLocalData);
+  if (data) {
+    try {
+      const response = await axios.get(
+        `${API_URL}/properties/admin/filtered-listings`,
+        {
+          params: { page, limit, status },
+          headers: {
+            Authorization: `Bearer ${data}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId");
+        router.push("/"); // redirect to login
+        throw new Error("Session expired. Please login again.");
       }
-    );
-    if (response.status === 401) {
-      // Token expired or missing
-      localStorage.removeItem("token");
-      localStorage.removeItem("userId");
-      router.push("/"); // redirect to login
-      return;
+
+      // Handle other errors
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch listings"
+      );
     }
-    return response.data;
-  } catch (error) {
-    throw new Error(
-      error.response?.data?.message || "Failed to fetch listings"
-    );
   }
 };
 
@@ -191,7 +218,7 @@ export function ListingsTable() {
   const [imagePopupOpen, setImagePopupOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
   const [selectedPropertyName, setSelectedPropertyName] = useState("");
-
+  const [bulk, setBulk] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all"); // State to track the selected status filter
   const [totalListings, setTotalListings] = useState(0);
   const [totalActiveListings, setTotalActiveListings] = useState(0);
@@ -313,8 +340,126 @@ export function ListingsTable() {
     }
   }, [listingToDelete]);
 
+  const handleBulkApprove = async () => {
+    const selectedIds = table
+      .getSelectedRowModel()
+      .rows.map((r) => r.original._id);
+    if (selectedIds.length === 0) return toast.error("No listings selected");
+
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
+
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`${API_URL}/properties/admin/approve/${id}`, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${data}`,
+              "Content-Type": "application/json",
+            },
+          })
+        )
+      );
+      toast.success(`Approved ${selectedIds.length} listing(s)`);
+      setApproveDialogOpen(false);
+      setBulk(false);
+      fetchFilteredListings();
+      table.resetRowSelection();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delist selected listings");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const selectedIds = table
+      .getSelectedRowModel()
+      .rows.map((r) => r.original._id);
+    if (selectedIds.length === 0) return toast.error("No listings selected");
+
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
+
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`${API_URL}/properties/user-property/${id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${data}`,
+              "Content-Type": "application/json",
+            },
+          })
+        )
+      );
+      toast.success(`Deleted ${selectedIds.length} listing(s)`);
+      setDeleteDialogOpen(false);
+      setBulk(false);
+      fetchFilteredListings();
+      table.resetRowSelection();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete selected listings");
+    }
+  };
+
+  const handleBulkDelist = async () => {
+    const selectedIds = table
+      .getSelectedRowModel()
+      .rows.map((r) => r.original._id);
+    if (selectedIds.length === 0) return toast.error("No listings selected");
+
+    const getLocalData = await localStorage.getItem("token");
+    const data = JSON.parse(getLocalData);
+
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`${API_URL}/properties/admin/delist/${id}`, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${data}`,
+              "Content-Type": "application/json",
+            },
+          })
+        )
+      );
+      toast.success(`Delisted ${selectedIds.length} listing(s)`);
+      setDelistDialogOpen(false);
+      setBulk(false);
+      fetchFilteredListings();
+      table.resetRowSelection();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delist selected listings");
+    }
+  };
+
   const columns = React.useMemo(
     () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <input
+            type="checkbox"
+            className="accent-primaryGreen"
+            checked={table.getIsAllPageRowsSelected()}
+            onChange={(e) => table.toggleAllPageRowsSelected(e.target.checked)}
+          />
+        ),
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            className="accent-primaryGreen"
+            checked={row.getIsSelected()}
+            onChange={(e) => row.toggleSelected(e.target.checked)}
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+
       {
         accessorKey: "photos",
         header: "Thumbnail",
@@ -369,8 +514,13 @@ export function ListingsTable() {
         header: "Property Type",
       },
       {
-        accessorKey: "kycStatus",
-        header: "Kyc Status",
+        header: "KYC/Bank Status",
+        cell: ({ row }) => {
+          const listing = row.original; // Access actual data
+          return (
+            <StatusKyc kyc={listing.kycStatus} bank={listing.bankDetails} />
+          );
+        },
       },
       {
         accessorKey: "hostEmail",
@@ -543,7 +693,10 @@ export function ListingsTable() {
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
+            <Button
+              variant="destructive"
+              onClick={bulk ? handleBulkDelete : handleConfirmDelete}
+            >
               Delete
             </Button>
           </DialogFooter>
@@ -568,7 +721,7 @@ export function ListingsTable() {
             </Button>
             <Button
               className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-              onClick={handleConfirmApproveListing}
+              onClick={bulk ? handleBulkApprove : handleConfirmApproveListing}
             >
               Confirm
             </Button>
@@ -594,7 +747,7 @@ export function ListingsTable() {
             </Button>
             <Button
               className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-              onClick={handleConfirmDelist}
+              onClick={bulk ? handleBulkDelist : handleConfirmDelist}
             >
               Confirm
             </Button>
@@ -683,6 +836,44 @@ export function ListingsTable() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {Object.keys(rowSelection).length > 0 && (
+        <div className="flex items-center justify-between mb-4 bg-gray-50 border rounded p-3">
+          <span className="text-sm">
+            {Object.keys(rowSelection).length} selected
+          </span>
+          <div className="space-x-2">
+            <Button
+              onClick={() => {
+                setBulk(true);
+                setApproveDialogOpen(true);
+              }}
+              className="text-white bg-green-600 hover:bg-green-700"
+            >
+              Approve Selected
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setBulk(true);
+                setDeleteDialogOpen(true);
+              }}
+              className="text-white bg-red-600 hover:bg-red-700"
+            >
+              Delete Selected
+            </Button>
+            <Button
+              onClick={() => {
+                setBulk(true);
+                setDelistDialogOpen(true);
+              }}
+              className="text-white bg-yellow-600 hover:bg-yellow-700"
+            >
+              Delist Selected
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* ----------- TABLE ----------- */}
       <div className="rounded-md bg-white border">
