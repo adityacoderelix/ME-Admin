@@ -1,5 +1,7 @@
 "use client";
 
+//Under Work--------------------------------------------------
+
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,10 +78,12 @@ export default function DashboardPage() {
           {/* Page header */}
           <div className="flex items-center justify-between space-y-2">
             <h2 className="text-3xl font-semibold font-bricolage tracking-tight">
-              Dashboard Overview
+              Dashboard Overview (#underwork)
             </h2>
             <div className="flex items-center space-x-2">
-              <Button className="bg-primaryGreen text-white hover:bg-brightGreen rounded-md">Download Report</Button>
+              {/* <Button className="bg-primaryGreen text-white hover:bg-brightGreen rounded-md">
+                Download Report
+              </Button> */}
             </div>
           </div>
 
@@ -165,7 +169,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle>Guest Arrivals</CardTitle>
                 <CardDescription>
-                    Monthly guest arrivals in Goa over the past year
+                  Monthly guest arrivals in Goa over the past year
                 </CardDescription>
               </CardHeader>
               <CardContent className="pl-2">
@@ -247,8 +251,7 @@ export default function DashboardPage() {
                     showYAxis={true}
                     curveType="monotone"
                     valueFormatter={{
-                      revenue: (value) =>
-                        `₹${(value / 100000).toFixed(1)}L`,
+                      revenue: (value) => `₹${(value / 100000).toFixed(1)}L`,
                       occupancy: (value) => `${value}%`,
                     }}
                   />
@@ -395,9 +398,7 @@ export default function DashboardPage() {
                             {host.properties} properties · {host.rating} rating
                           </p>
                         </div>
-                        <div className="ml-auto font-medium">
-                          {host.rating}
-                        </div>
+                        <div className="ml-auto font-medium">{host.rating}</div>
                       </div>
                     ))}
                   </div>
@@ -405,7 +406,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
-
 
           {/* Action Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -417,7 +417,10 @@ export default function DashboardPage() {
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <Button className="w-full bg-primaryGreen text-white hover:bg-brightGreen rounded-md" variant="outline">
+                <Button
+                  className="w-full bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+                  variant="outline"
+                >
                   View All Guests
                 </Button>
               </CardContent>
@@ -430,7 +433,10 @@ export default function DashboardPage() {
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <Button className="w-full bg-primaryGreen text-white hover:bg-brightGreen rounded-md" variant="outline">
+                <Button
+                  className="w-full bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+                  variant="outline"
+                >
                   Manage Properties
                 </Button>
               </CardContent>
@@ -443,7 +449,10 @@ export default function DashboardPage() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <Button className="w-full bg-primaryGreen text-white hover:bg-brightGreen rounded-md" variant="outline">
+                <Button
+                  className="w-full bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+                  variant="outline"
+                >
                   View Bookings
                 </Button>
               </CardContent>
@@ -456,7 +465,10 @@ export default function DashboardPage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <Button className="w-full bg-primaryGreen text-white hover:bg-brightGreen rounded-md" variant="outline">
+                <Button
+                  className="w-full bg-primaryGreen text-white hover:bg-brightGreen rounded-md"
+                  variant="outline"
+                >
                   Generate Reports
                 </Button>
               </CardContent>
