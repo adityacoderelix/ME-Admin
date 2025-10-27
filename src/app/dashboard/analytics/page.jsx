@@ -197,15 +197,14 @@ const AnalyticsPage = () => {
     }
   };
   const fetchHostEmails = async () => {
-    const getLocalData = await localStorage.getItem("admin");
+    const getLocalData = await localStorage.getItem("token");
     const data = JSON.parse(getLocalData);
-
     if (data) {
       try {
         const response = await fetch(`${API_URL}/booking/hostEmails`, {
           method: "GET",
           headers: {
-            //   Authorization: `Bearer ${data}`,
+            Authorization: `Bearer ${data}`,
             "Content-Type": "application/json",
           },
         });

@@ -460,7 +460,7 @@ const ReviewsPage = () => {
               {reviewData?.data?.map((review) => (
                 <TableRow
                   className={
-                    review.bookingId.flag && review.hideStatus == "pending"
+                    review?.bookingId?.flag && review?.hideStatus == "pending"
                       ? "bg-green-100"
                       : ""
                   }
