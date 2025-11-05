@@ -433,6 +433,7 @@ export default function BookingsPage() {
   });
   const arrayCheckoutDate = exportCheckoutDate.split("/");
   console.log("aaa");
+  s;
   return (
     <div
       className={
