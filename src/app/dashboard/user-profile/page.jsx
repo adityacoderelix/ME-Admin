@@ -1,1 +1,1 @@
-export const Userprofile = () => {};
+export default function Userprofile() {}
