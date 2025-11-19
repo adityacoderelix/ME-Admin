@@ -209,7 +209,7 @@ export default function BookingsPage() {
     if (data) {
       try {
         const response = await fetch(
-          `${API_URL}/booking/analytics-filter?search=${searchTerm}&status=${activeTab}&from=${from}&to=${to}`,
+          `${API_URL}/booking/admin/analytics-filter?search=${searchTerm}&status=${activeTab}&from=${from}&to=${to}`,
           {
             method: "GET",
             headers: {

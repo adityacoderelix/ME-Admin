@@ -42,7 +42,7 @@ const fetchHostData = async (hostIdStr) => {
   return result.data;
 };
 
-export default function detailView() {
+export default function DetailView() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const propertyId = searchParams.get("property");
