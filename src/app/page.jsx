@@ -129,6 +129,7 @@ export default function Home() {
         body: JSON.stringify({
           email: email,
           otp: otp,
+          admin: true,
         }),
       });
 
